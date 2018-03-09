@@ -25,7 +25,7 @@ package
 	import flash.utils.getTimer;
 	
 	/**
-	 * Sample class showing how to use AIRDock. This class creates two Dockers, 
+	 * Sample class showing how to use AIRDock. This class creates two Dockers.
 	 * @author Gimmick
 	 */
 	public class DockingTest extends Sprite 
