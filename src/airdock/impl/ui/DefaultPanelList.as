@@ -126,7 +126,7 @@ package airdock.impl.ui
 			if (evt.target is PanelTab) {
 				panel = vec_panels[vec_tabs.indexOf(evt.target as PanelTab)];
 			}
-			dispatchEvent(new PanelContainerEvent(PanelContainerEvent.STATE_TOGGLED, panel, null, true, false))
+			dispatchEvent(new PanelContainerEvent(PanelContainerEvent.STATE_TOGGLE_REQUESTED, panel, null, true, false))
 			evt.stopImmediatePropagation()
 		}
 		

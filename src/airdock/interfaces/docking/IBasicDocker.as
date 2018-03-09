@@ -4,15 +4,17 @@ package airdock.interfaces.docking
 	import airdock.config.PanelConfig;
 	import airdock.interfaces.docking.IPanel;
 	import airdock.interfaces.docking.IContainer;
+	import airdock.util.IPair;
 	import flash.display.DisplayObjectContainer;
 	import flash.display.NativeWindow;
 	import flash.display.Stage;
+	import flash.events.IEventDispatcher;
 	
 	/**
 	 * ...
 	 * @author Gimmick
 	 */
-	public interface IBasicDocker 
+	public interface IBasicDocker extends IEventDispatcher
 	{
 		/**
 		 * Integrates a panel into the given side of a container.
@@ -20,7 +22,13 @@ package airdock.interfaces.docking
 		 * @param	container
 		 * @param	side
 		 */
-		function integratePanel(panel:IPanel, container:IContainer, side:int):IContainer
+		function integratePanelToContainer(panel:IPanel, container:IContainer, side:int):IContainer
+		/**
+		 * Integrates a panel into the last root container it occupied.
+		 * @param	panel
+		 * @return	The container into which it is integrated into.
+		 */
+		function integrateAndShowPanel(panel:IPanel):IContainer
 		/**
 		 * Docks a given panel to its original window.
 		 * @param	panel	The panel to dock.
@@ -33,7 +41,20 @@ package airdock.interfaces.docking
 		function setupPanel(panel:IPanel):void;
 		
 		function unhookPanel(panel:IPanel):void;
-		//TODO finish ASDoc
+		function setupWindow(window:NativeWindow):void
+		function unhookWindow(window:NativeWindow):void
+		function hidePanel(panel:IPanel):void;
+		
+		function showPanel(panel:IPanel):void;
+		
+		function getPanelWindows():Vector.<IPair>
+		function getPanelContainers():Vector.<IPair>
+		
+		function getPanelWindow(panel:IPanel):NativeWindow;
+		function getContainerWindow(container:IContainer):NativeWindow;
+		function getWindowContainer(window:NativeWindow):IContainer;
+		function getWindowPanel(window:NativeWindow):IPanel;
+		function isPanelVisible(panel:IPanel):Boolean;
 		
 		function get crossDockingPolicy():int;
 		function set crossDockingPolicy(policyFlags:int):void;

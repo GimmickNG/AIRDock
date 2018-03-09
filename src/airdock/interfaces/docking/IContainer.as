@@ -32,11 +32,14 @@ package airdock.interfaces.docking
 		function hasPanels(recursive:Boolean):Boolean;
 		
 		function get hasSides():Boolean
-		function get panels():Array
+		function get panels():Vector.<IPanel>
 		function get currentSideCode():int
 		
 		function get panelList():IPanelList
 		function set panelList(panelList:IPanelList):void
+		
+		function get sideSize():Number
+		function set sideSize(size:Number):void
 		
 		function get sideRatio():Number
 		function set sideRatio(ratio:Number):void

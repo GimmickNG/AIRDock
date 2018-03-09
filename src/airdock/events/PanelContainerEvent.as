@@ -14,7 +14,7 @@ package airdock.events
 		public static const DRAG_REQUESTED:String = "pcDragPanel";
 		public static const SHOW_REQUESTED:String = "pcShowPanel";
 		public static const REMOVE_REQUESTED:String = "pcPanelRemoveRequested";
-		public static const STATE_TOGGLED:String = "pcPanelStateToggled";
+		public static const STATE_TOGGLE_REQUESTED:String = "pcPanelStateToggleRequested";
 		public static const SETUP_REQUESTED:String = "pcSetupRequested";
 		public static const RESIZED:String = "pcContainerResized";
 		public static const CONTAINER_CREATED:String = "pcContainerCreated";

@@ -24,7 +24,7 @@ package airdock.impl
 	 * ...
 	 * @author Gimmick
 	 */
-	public class DefaultContainer extends Sprite implements IContainer
+	public class DefaultContainerAsLeaf extends Sprite implements IContainer
 	{
 		private var i_currSide:int;
 		private var num_ratio:Number;
@@ -36,12 +36,10 @@ package airdock.impl
 		private var b_containerState:Boolean;
 		private var plc_otherSide:IContainer;
 		private var plc_currentSide:IContainer;
-		private var vec_panels:Vector.<IPanel>
-		public function DefaultContainer()
+		public function DefaultContainerAsLeaf()
 		{
 			resetContainer()
 			addChildUpdateListeners()
-			vec_panels = new Vector.<IPanel>()
 			num_maxWidth = num_maxHeight = 128
 			addEventListener(PanelPropertyChangeEvent.PROPERTY_CHANGED, updatePanelBar, false, 0, true)
 		}
@@ -174,17 +172,10 @@ package airdock.impl
 		
 		private function updatePanelBarOnEvent(evt:Event):void 
 		{
-			var panel:IPanel = evt.target as IPanel;
-			if (!(panel && evt.eventPhase == EventPhase.BUBBLING_PHASE && panel.parent == this)) {
+			if (!(evt.target is IPanel && evt.eventPhase == EventPhase.BUBBLING_PHASE && evt.target.parent == this)) {
 				return;
 			}
-			var index:int = vec_panels.indexOf(panel)
-			if (evt.type == Event.ADDED && index == -1) {
-				vec_panels.push(panel)
-			}
-			else if(evt.type == Event.REMOVED && index != -1) {
-				vec_panels.splice(index, 1)
-			}
+			var panel:IPanel = evt.target as IPanel;
 			if (cl_panelList)
 			{
 				if (evt.type == Event.ADDED)
@@ -300,8 +291,17 @@ package airdock.impl
 			return (currentSide || otherSide)
 		}
 		
-		public function get panels():Vector.<IPanel> {
-			return vec_panels.concat()
+		public function get panels():Array
+		{
+			var panelList:Array = new Array()
+			for (var i:int = numChildren - 1; i >= 0; --i)
+			{
+				var currChild:DisplayObject = getChildAt(i)
+				if(currChild is IPanel) {
+					panelList.push(currChild)
+				}
+			}
+			return panelList
 		}
 		
 		public function getSide(side:int):IContainer
@@ -330,11 +330,7 @@ package airdock.impl
 				addChild(displayablePanel)
 				if (displayablePanelList)
 				{
-					var rect:Rectangle;
-					var displayableList:IDisplayablePanelList = panelList as IDisplayablePanelList;
-					displayableList.maxWidth = width;
-					displayableList.maxHeight = height;
-					rect = displayableList.visibleRegion;
+					var rect:Rectangle = (displayablePanelList as IDisplayablePanelList).visibleRegion;
 					displayablePanel.height = rect.height;
 					displayablePanel.width = rect.width;
 					displayablePanel.x = rect.x
@@ -352,7 +348,7 @@ package airdock.impl
 			else
 			{
 				if (!container) {
-					addContainer(PanelContainerSide.getComplementary(side), createContainer())
+					addContainer(PanelContainerSide.getComplementary(side), new DefaultContainerAsLeaf())
 				}
 				container = getSide(side);
 				container.addToSide(PanelContainerSide.FILL, panel)
@@ -441,14 +437,22 @@ package airdock.impl
 			return null;
 		}
 		
+		//TODO change architecture so that only single panel needed?
 		public function removeContainer(panelContainer:IContainer):IContainer
 		{
 			var oppContainer:IContainer;
-			if (panelContainer == currentSide) {
-				oppContainer = otherSide
+			if(!panelContainer) {
+				return null;
 			}
-			else if (panelContainer == otherSide) {
+			else if (panelContainer == currentSide)
+			{
+				oppContainer = otherSide
+				currentSide = null
+			}
+			else if (panelContainer == otherSide)
+			{
 				oppContainer = currentSide
+				otherSide = null;
 			}
 			else
 			{
@@ -464,44 +468,39 @@ package airdock.impl
 				}
 				return result
 			}
-			oppContainer.mergeIntoContainer(this)
-			removeChild(oppContainer as DisplayObject)
+			
 			removeChild(panelContainer as DisplayObject)
+			trace('sp', panelContainer.hasPanels(true))
+			var remainingContainer:IContainer = panelContainer || oppContainer
+			if (!(currentSide || otherSide))
+			{
+				remainingContainer.mergeIntoContainer(this)
+				dispatchEvent(new PanelContainerEvent(PanelContainerEvent.REMOVE_REQUESTED, null, this, true, false))
+			}
 			return panelContainer
 		}
 		
 		public function addContainer(side:int, container:IContainer):IContainer
 		{
-			if (!container) {
-				return null;
-			}
-			
-			var retCon:IContainer							//heh
-			var sideContainer:IContainer = getSide(side)	//get: FILL (this) or side (child container)
-			if (sideContainer && sideContainer.hasSides == container.hasSides)
+			var selfContainer:IContainer;
+			if (!PanelContainerSide.isComplementary(side, currentSideCode) && hasPanels(true))
 			{
-				//merge if there are no sides for this current container
-				//or this container has a side equal to the side supplied
-				container.mergeIntoContainer(sideContainer)
-				retCon = sideContainer
-			}
-			else
-			{
-				var selfContainer:IContainer = createContainer()
-				resizeContainers(side, width, height, sideRatio, selfContainer, container);
+				selfContainer = new DefaultContainerAsLeaf()
 				mergeIntoContainer(selfContainer)
-				currentSide = selfContainer;
-				otherSide = container
-				sideCode = side;
-				addChild(container as DisplayObject)
+			}
+			resizeContainers(side, width, height, sideRatio, selfContainer, container);
+			currentSide = selfContainer;
+			otherSide = container
+			sideCode = side;
+			addChild(container as DisplayObject)
+			if (selfContainer)
+			{
 				addChild(selfContainer as DisplayObject)
-				
-				render()
-				retCon = container;
-				dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SETUP_REQUESTED, null, container, true, false));
 				dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SETUP_REQUESTED, null, selfContainer, true, false));
 			}
-			return retCon
+			dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SETUP_REQUESTED, null, container, true, false));
+			dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SETUP_REQUESTED, null, this, true, false));
+			return container
 		}
 		
 		override public function get height():Number {
@@ -635,16 +634,9 @@ package airdock.impl
 		public function fetchSide(side:int):IContainer
 		{
 			if(!getSide(side)) {
-				addContainer(PanelContainerSide.getComplementary(side), createContainer())
+				addContainer(PanelContainerSide.getComplementary(side), new DefaultContainerAsLeaf())
 			}
 			return getSide(side)
-		}
-		
-		private function createContainer():IContainer
-		{
-			var container:IContainer = new DefaultContainer()
-			dispatchEvent(new PanelContainerEvent(PanelContainerEvent.CONTAINER_CREATED, null, container, true, false));
-			return container
 		}
 		
 		private function redraw(width:Number, height:Number):void 
@@ -668,6 +660,19 @@ package airdock.impl
 					addChild(dispPanelList)
 				}
 			}
+			//TODO resizeContainers -> what if the tree is mostly leaves:
+			/*
+			 * 						E	(0.5->0.5)
+			 * 					P		E	(0.5->0)
+			 * 						*		E	(0.5->0)
+			 * 							*		E	(0.5->0)
+			 * 								*		E	(0.5->0.5)
+			 * 									*		P
+			 * it has to take into account that ratio
+			 * 0.5 -> 0 -> 0 -> 0 -> 0.5
+			 * = 15/16 for root instead of 1/2
+			 * 
+			 */
 			resizeContainers(sideCode, width, height, sideRatio, currentSide, otherSide)
 			if (dispPanelList)
 			{

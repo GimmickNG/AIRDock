@@ -8,6 +8,8 @@ package airdock.enums
 	{
 		public static const INTEGRATED:Boolean = false;
 		public static const DOCKED:Boolean = true;
+		public static const VISIBLE:Boolean = true;
+		public static const INVISIBLE:Boolean = false;
 		
 		public function PanelContainerState() {
 			
