@@ -10,6 +10,18 @@ package airdock.impl.ui
 	import flash.geom.Rectangle;
 	
 	/**
+	 * Dispatched when the resizing operation has completed.
+	 * @eventType	flash.events.Event.COMPLETE
+	 */
+	[Event(name = "complete", type = "flash.events.Event")]
+	
+	/**
+	 * Dispatched whenever a resize operation has been applied, i.e. the corresponding container has been resized.
+	 * @eventType	airdock.events.PanelContainerEvent.RESIZED
+	 */
+	[Event(name = "pcContainerResized", type = "airdock.events.PanelContainerEvent")]
+	
+	/**
 	 * ...
 	 * @author Gimmick
 	 */
@@ -71,19 +83,31 @@ package airdock.impl.ui
 			dispatchEvent(new PanelContainerEvent(PanelContainerEvent.RESIZED, null, plc_dragContainer, false, false))
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function get isDragging():Boolean {
 			return b_dragging
 		}
 		
-		public function setContainer(container:IContainer):void {
+		/**
+		 * @inheritDoc
+		 */
+		public function set container(container:IContainer):void {
 			plc_dragContainer = container
 		}
 		
-		public function getContainer():IContainer {
+		/**
+		 * @inheritDoc
+		 */
+		public function get container():IContainer {
 			return plc_dragContainer
 		}
 		
-		public function setSideCode(sideCode:int):void
+		/**
+		 * @inheritDoc
+		 */
+		public function set sideCode(sideCode:int):void
 		{
 			if (PanelContainerSide.isComplementary(PanelContainerSide.LEFT, sideCode)) {	//horizontal
 				rect_orientation.setTo(x, rect_maxSize.y, 4, rect_maxSize.height)
@@ -98,22 +122,37 @@ package airdock.impl.ui
 			i_sideCode = sideCode
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function set maxSize(size:Rectangle):void {
 			rect_maxSize.copyFrom(size)
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function get preferredXPercentage():Number {
 			return 0
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function get preferredYPercentage():Number {
 			return 0
 		}
 		
-		public function getSideCode():int {
+		/**
+		 * @inheritDoc
+		 */
+		public function get sideCode():int {
 			return i_sideCode
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function get tolerance():Number {
 			return 0.05
 		}	

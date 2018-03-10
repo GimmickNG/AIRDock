@@ -1,7 +1,11 @@
 package airdock.enums 
 {
 	/**
-	 * ...
+	 * Enumeration class dictating the cross docking policy for a given Docker instance.
+	 * A cross docking policy is that policy which decides whether a panel or container can:
+	 * * Outgoing - Attach to another container which is not originating from (i.e. has not been created by) its Docker
+	 * * Incoming - Have another panel or container, which is not originating from its Docker, be attached to it
+	 * * Both - allow or forbid both actions.
 	 * @author Gimmick
 	 */
 	public class CrossDockingPolicy 

@@ -18,8 +18,9 @@ package airdock.enums
 	import flash.display.NativeWindowInitOptions;
 	import flash.display.NativeWindowSystemChrome;
 	import flash.display.NativeWindowType;
+	
 	/**
-	 * ...
+	 * The default settings for a Docker. It is advised to use this in order to meet most (basic) use cases.
 	 * @author Gimmick
 	 */
 	public final class DockDefaults 
@@ -32,10 +33,13 @@ package airdock.enums
 		public static const PANEL_FACTORY:Class = DefaultMultiFactory
 		public static const RESIZER:Class = DefaultResizer
 		
-		public function DockDefaults() {
-			
-		}
+		public function DockDefaults() { }
 		
+		/**
+		 * Creates the default options for a Docker instance.
+		 * @param	mainContainer	The main container to which the Docker is to be attached to.
+		 * @return	A DockConfig instance representing the set of (default) options for the Docker.
+		 */
 		public static function createDefaultOptions(mainContainer:DisplayObjectContainer):DockConfig
 		{
 			var options:DockConfig = new DockConfig()
@@ -59,5 +63,4 @@ package airdock.enums
 			return options
 		}
 	}
-
 }

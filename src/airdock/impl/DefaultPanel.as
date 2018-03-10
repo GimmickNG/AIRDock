@@ -13,6 +13,18 @@ package airdock.impl
 	import flash.geom.Point;
 	
 	/**
+	 * Dispatched when any of the listed panel's attributes have been changed:
+	 * * color
+	 * * dockable
+	 * * resizable
+	 * * width
+	 * * height
+	 * * panelName
+	 * @eventType	airdock.events.PanelPropertyChangeEvent.PROPERTY_CHANGED
+	 */
+	[Event(name="ppcPropertyChange", type="airdock.events.PanelPropertyChangeEvent")]
+	
+	/**
 	 * ...
 	 * @author Gimmick
 	 */
@@ -49,10 +61,16 @@ package airdock.impl
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function getDefaultHeight():Number {
 			return 256;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function getDefaultWidth():Number {
 			return 256;
 		}
@@ -68,10 +86,16 @@ package airdock.impl
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function get panelName():String {
 			return str_panelName;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function set panelName(value:String):void
 		{
 			if (str_panelName != value)
@@ -82,10 +106,16 @@ package airdock.impl
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function get resizable():Boolean {
 			return b_resizable;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function set resizable(value:Boolean):void
 		{
 			if (b_resizable != value)
@@ -95,10 +125,16 @@ package airdock.impl
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function get dockable():Boolean {
 			return b_dockable;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function set dockable(value:Boolean):void
 		{
 			if (b_dockable != value) 
@@ -108,10 +144,16 @@ package airdock.impl
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		override public function get width():Number {
 			return super.width;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		override public function set width(value:Number):void 
 		{
 			if (width != value) {
@@ -119,10 +161,16 @@ package airdock.impl
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		override public function get height():Number {
 			return super.height;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		override public function set height(value:Number):void 
 		{
 			if (height != value) {

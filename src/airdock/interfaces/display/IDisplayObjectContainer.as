@@ -6,7 +6,9 @@ package airdock.interfaces.display
 	import flash.text.TextSnapshot;
 	
 	/**
-	 * A convenience interface which signals an object is a DisplayObjectContainer, i.e. DisplayObjectContainers always implement this interface. However, the converse is not true - implementing this interface will not allow an object to behave like a DisplayObjectContainer.
+	 * A convenience interface which signals an object is a DisplayObjectContainer, i.e. DisplayObjectContainers always implement this interface.
+	 * However, the converse is not true - implementing this interface will not allow an object to behave like a DisplayObjectContainer.
+	 * Taken from the DisplayObjectContainer class.
 	 * @author Gimmick
 	 */
 	public interface IDisplayObjectContainer extends IDisplayObject

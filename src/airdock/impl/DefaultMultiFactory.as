@@ -19,10 +19,16 @@ package airdock.impl
 	{
 		public function DefaultMultiFactory() { }
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function createPanelList():IPanelList {
 			return new DefaultPanelList()
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function createPanel(options:PanelConfig):IPanel 
 		{
 			var defaultPanel:DefaultPanel = new DefaultPanel()
@@ -31,6 +37,9 @@ package airdock.impl
 			return defaultPanel
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function createContainer(options:ContainerConfig):IContainer 
 		{
 			var defaultContainer:DefaultContainer = new DefaultContainer()

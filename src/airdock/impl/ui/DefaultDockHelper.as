@@ -11,6 +11,12 @@ package airdock.impl.ui
 	import flash.events.NativeDragEvent;
 
 	/**
+	 * Dispatched when the user has dropped the panel or container onto the dock target, and the Docker is to decide what action to take.
+	 * @eventType airdock.events.DockEvent.DRAG_COMPLETING
+	 */
+	[Event(name="deDragCompleting", type="airdock.events.DockEvent")]
+	
+	/**
 	 * ...
 	 * @author Gimmick
 	 */
@@ -40,7 +46,7 @@ package airdock.impl.ui
 		}
 		
 		private function acceptDragDrop(evt:NativeDragEvent):void {
-			dispatchEvent(new DockEvent(DockEvent.DRAG_COMPLETED, evt.clipboard, evt.target as DisplayObject, true, false))
+			dispatchEvent(new DockEvent(DockEvent.DRAG_COMPLETING, evt.clipboard, evt.target as DisplayObject, true, true))
 		}
 		
 		private function displayDockHandlesOnDrag(evt:NativeDragEvent):void 
@@ -52,6 +58,9 @@ package airdock.impl.ui
 			NativeDragManager.acceptDragDrop(currentTarget)
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function getSideFrom(dropTarget:DisplayObject):int
 		{
 			switch(dropTarget)
@@ -70,14 +79,23 @@ package airdock.impl.ui
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function hideAll():void {
 			spr_centerShape.alpha = spr_leftShape.alpha = spr_rightShape.alpha = spr_bottomShape.alpha = spr_topShape.alpha = 0
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function showAll():void {
 			spr_centerShape.alpha = spr_leftShape.alpha = spr_rightShape.alpha = spr_bottomShape.alpha = spr_topShape.alpha = 1
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function draw(width:Number, height:Number):void
 		{
 			var currGraphics:Graphics;
@@ -113,10 +131,16 @@ package airdock.impl.ui
 			currGraphics.endFill()
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function getDefaultWidth():Number {
 			return 64.0
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function getDefaultHeight():Number {
 			return 64.0
 		}

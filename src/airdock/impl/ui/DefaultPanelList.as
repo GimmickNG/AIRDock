@@ -16,6 +16,32 @@ package airdock.impl.ui
 	import flash.geom.Rectangle;
 	
 	/**
+	 * Dispatched when the user has dropped the panel or container onto a tab, and the Docker is to decide what action to take.
+	 * @eventType	airdock.events.DockEvent.DRAG_COMPLETING
+	 */
+	[Event(name="deDragCompleting", type="airdock.events.DockEvent")]
+	
+	/**
+	 * Dispatched when the user has clicked on a tab and the corresponding panel is to be shown.
+	 * @eventType	airdock.events.PanelContainerEvent.SHOW_REQUESTED
+	 */
+	[Event(name="pcShowPanel", type="airdock.events.PanelContainerEvent")]
+	
+	/**
+	 * Dispatched when the user has double clicked on a tab and the corresponding panel is to be docked, 
+	 * or when the user has double clicked on the background of the panel list and the entire container's contents are to be docked.
+	 * @eventType	airdock.events.PanelContainerEvent.STATE_TOGGLE_REQUESTED
+	 */
+	[Event(name="pcPanelStateToggleRequested", type="airdock.events.PanelContainerEvent")]
+	
+	/**
+	 * Dispatched when the user has started dragging a tab and the corresponding panel is to participate in a drag-docking operation,
+	 * or when the user has started dragging the background of the panel list and the entire container is to participate in a drag-docking operation.
+	 * @eventType	airdock.events.PanelContainerEvent.DRAG_REQUESTED
+	 */
+	[Event(name="pcDragPanel", type ="airdock.events.PanelContainerEvent")]
+	
+	/**
 	 * ...
 	 * @author Gimmick
 	 */
@@ -50,12 +76,15 @@ package airdock.impl.ui
 		
 		private function startDispatchDrag(evt:MouseEvent):void 
 		{
+			if (evt.target is PanelTab && !vec_panels[vec_tabs.indexOf(evt.target as PanelTab)].dockable) {
+				return;
+			}
 			removeEventListener(MouseEvent.MOUSE_DOWN, startDispatchDrag)
 			addEventListener(MouseEvent.MOUSE_MOVE, dispatchDrag)
 		}
 		
 		private function onDragDrop(evt:NativeDragEvent):void {
-			dispatchEvent(new DockEvent(DockEvent.DRAG_COMPLETED, evt.clipboard, evt.target as DisplayObject, true, false))
+			dispatchEvent(new DockEvent(DockEvent.DRAG_COMPLETING, evt.clipboard, evt.target as DisplayObject, true, true))
 		}
 		
 		private function onDragOver(evt:NativeDragEvent):void
@@ -65,10 +94,16 @@ package airdock.impl.ui
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function getSideFrom(target:DisplayObject):int {
 			return PanelContainerSide.FILL
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function addPanelAt(panel:IPanel, index:int):void
 		{
 			if(!panel) {
@@ -92,10 +127,16 @@ package airdock.impl.ui
 			return tab
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function addPanel(panel:IPanel):void {
 			addPanelAt(panel, vec_panels.length)
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function updatePanel(panel:IPanel):void
 		{
 			var index:int = vec_panels.indexOf(panel);
@@ -109,10 +150,13 @@ package airdock.impl.ui
 		private function dispatchShowPanel(evt:MouseEvent):void
 		{
 			if(!(evt.target is PanelTab)) {
-				return
+				return;
 			}
 			var index:int = vec_tabs.indexOf(evt.target as PanelTab)
-			dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SHOW_REQUESTED, vec_panels[index], null, true, false))
+			if(!dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SHOW_REQUESTED, vec_panels[index], null, true, true))) {
+				return;
+			}
+			
 			var tab:PanelTab = vec_tabs[index];
 			for (var i:uint = 0; i < vec_tabs.length; ++i) {
 				vec_tabs[i].deactivate()
@@ -126,7 +170,10 @@ package airdock.impl.ui
 			if (evt.target is PanelTab) {
 				panel = vec_panels[vec_tabs.indexOf(evt.target as PanelTab)];
 			}
-			dispatchEvent(new PanelContainerEvent(PanelContainerEvent.STATE_TOGGLE_REQUESTED, panel, null, true, false))
+			if (panel && !panel.dockable) {
+				return;
+			}
+			dispatchEvent(new PanelContainerEvent(PanelContainerEvent.STATE_TOGGLE_REQUESTED, panel, null, true, true))
 			evt.stopImmediatePropagation()
 		}
 		
@@ -173,6 +220,9 @@ package airdock.impl.ui
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function removePanelAt(index:int):void
 		{
 			var tab:PanelTab = vec_tabs.splice(index, 1)[0];
@@ -183,6 +233,9 @@ package airdock.impl.ui
 			redraw(width, height)
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function removePanel(panel:IPanel):void 
 		{
 			var index:int = vec_panels.indexOf(panel)
@@ -192,6 +245,9 @@ package airdock.impl.ui
 			removePanelAt(index)
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function showPanel(panel:IPanel):void 
 		{
 			var index:int = vec_panels.indexOf(panel)
@@ -205,6 +261,9 @@ package airdock.impl.ui
 			tab.activate()
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function set maxWidth(value:Number):void 
 		{
 			num_maxWidth = value;
@@ -213,6 +272,9 @@ package airdock.impl.ui
 			redraw(value, height)
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function set maxHeight(value:Number):void 
 		{
 			num_maxHeight = value;
@@ -222,17 +284,30 @@ package airdock.impl.ui
 			rect_visibleRegion.height = value - 40
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function get visibleRegion():Rectangle {
 			return rect_visibleRegion
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function get preferredLocation():Point {
 			return pt_preferredLocation;
 		}
+		
+		/**
+		 * @inheritDoc
+		 */
 		public function get maxHeight():Number {
 			return num_maxHeight;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function get maxWidth():Number {
 			return num_maxWidth;
 		}
