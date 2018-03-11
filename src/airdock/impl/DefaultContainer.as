@@ -152,6 +152,8 @@ package airdock.impl
 				otherSide.flattenContainer()
 				currentSide.flattenContainer()
 				otherSide.mergeIntoContainer(this)
+				//this may not be necessary since otherSide will anyways have side FILL and no subcontainers
+				//keep it just in case?
 				setContainers(PanelContainerSide.FILL, null, null)
 			}
 			return canFlatten
@@ -347,7 +349,7 @@ package airdock.impl
 			}
 			this.currentSide = currentSide
 			this.otherSide = otherSide
-			sideCode = sideCode
+			this.sideCode = sideCode
 			render()
 		}
 		
@@ -600,10 +602,8 @@ package airdock.impl
 				}
 				return result
 			}
-			oppContainer.mergeIntoContainer(this)
-			removeChild(oppContainer as DisplayObject)
-			removeChild(panelContainer as DisplayObject)
-			return panelContainer
+			oppContainer.mergeIntoContainer(this);
+			return panelContainer;
 		}
 		
 		/**
