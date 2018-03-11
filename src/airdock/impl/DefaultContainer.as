@@ -52,8 +52,12 @@ package airdock.impl
 	[Event(name="pcPanelAdded", type="airdock.events.PanelContainerEvent")]
 	
 	/**
-	 * ...
-	 * @author Gimmick
+	 * Default IContainer implementation.
+	 * 
+	 * Always has either zero or two subcontainers at a time, even if only one is occupied.
+	 * 
+	 * @author	Gimmick
+	 * @see	airdock.interfaces.docking.IContainer
 	 */
 	public class DefaultContainer extends Sprite implements IContainer
 	{
@@ -142,7 +146,7 @@ package airdock.impl
 		 */
 		public function flattenContainer():Boolean
 		{
-			var canFlatten:Boolean = (hasSides && currentSideCode != PanelContainerSide.FILL)
+			var canFlatten:Boolean = (hasSides && sideCode != PanelContainerSide.FILL)
 			if (canFlatten)
 			{
 				otherSide.flattenContainer()
@@ -317,7 +321,7 @@ package airdock.impl
 				container.addChild(currChild)
 			}
 			addChildUpdateListeners()
-			container.setContainers(currentSideCode, currentSide, otherSide)
+			container.setContainers(sideCode, currentSide, otherSide)
 			if(container.panelList is IDisplayablePanelList) {
 				container.setChildIndex(container.panelList as DisplayObject, container.numChildren - 1)
 			}
@@ -343,7 +347,7 @@ package airdock.impl
 			}
 			this.currentSide = currentSide
 			this.otherSide = otherSide
-			currentSideCode = sideCode
+			sideCode = sideCode
 			render()
 		}
 		
@@ -408,10 +412,10 @@ package airdock.impl
 			}
 			else if (hasSides)
 			{
-				if(currentSideCode == side) {
+				if(sideCode == side) {
 					return currentSide
 				}
-				else if(PanelContainerSide.isComplementary(currentSideCode, side)) {
+				else if(PanelContainerSide.isComplementary(sideCode, side)) {
 					return otherSide
 				}
 			}
@@ -692,14 +696,14 @@ package airdock.impl
 		/**
 		 * @inheritDoc
 		 */
-		public function get currentSideCode():int {
+		public function get sideCode():int {
 			return i_currSide
 		}
 		
 		/**
 		 * @inheritDoc
 		 */
-		public function set currentSideCode(sideCode:int):void {
+		public function set sideCode(sideCode:int):void {
 			i_currSide = sideCode
 		}
 		
@@ -809,7 +813,7 @@ package airdock.impl
 			}
 			
 			if (hasSides) {
-				resizeContainers(currentSideCode, width, height, sideSize, currentSide, otherSide)
+				resizeContainers(sideCode, width, height, sideSize, currentSide, otherSide)
 			}
 			else
 			{

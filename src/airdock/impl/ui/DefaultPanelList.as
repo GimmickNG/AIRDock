@@ -14,6 +14,7 @@ package airdock.impl.ui
 	import flash.events.NativeDragEvent;
 	import flash.geom.Point;
 	import flash.geom.Rectangle;
+	import flash.text.TextField;
 	
 	/**
 	 * Dispatched when the user has dropped the panel or container onto a tab, and the Docker is to decide what action to take.
@@ -42,34 +43,56 @@ package airdock.impl.ui
 	[Event(name="pcDragPanel", type ="airdock.events.PanelContainerEvent")]
 	
 	/**
-	 * ...
-	 * @author Gimmick
+	 * Default IDisplayablePanelList (and by extension, IPanelList) implementation.
+	 * 
+	 * Provides a tabbed list at the bottom of the container with a bar at the top with the active panel's name.
+	 * 
+	 * The colour of the tabbed bar and the top bar are light blue and dark blue by default, respectively; 
+	 * this can be changed by modifying the static attribute ACTIVATED_COLOR and DEACTIVATED_COLOR (respectively).
+	 * 
+	 * A panel or the entire container can be docked to its parked container by double clicking either a tab or the tabbed bar, respectively.
+	 * 
+	 * Also acts as an IDockTarget implementation for integrating into the center/the same container, whenever the user drags a panel or container over a tab.
+	 * 
+	 * @author	Gimmick
+	 * @see	airdock.interfaces.docking.IDockTarget
+	 * @see	airdock.interfaces.ui.IDisplayablePanelList
 	 */
 	public class DefaultPanelList extends Sprite implements IDisplayablePanelList, IDockTarget
 	{
-		public static const PREFERRED_HEIGHT:int = 24;
+		/**
+		 * The color of the tabbed bar, and the color of a tab which is activated. Can be changed.
+		 * @default 0x86B7E8
+		 */
+		public static var ACTIVATED_COLOR:int = 0x86B7E8;
+		
+		/**
+		 * The color of the top bar, and the color of a tab which has been deactivated. Can be changed.
+		 * @default 0x164B9C
+		 */
 		public static var DEACTIVATED_COLOR:int = 0x164B9C;
-		public static var ACTIVATED_COLOR:int = 0x87CEEB;
 		
 		private var u_color:uint;
 		private var num_maxWidth:Number;
 		private var num_maxHeight:Number;
+		private var tf_panelName:TextField;
 		private var vec_panels:Vector.<IPanel>;
-		private var vec_tabs:Vector.<PanelTab>
+		private var vec_tabs:Vector.<PanelTab>;
 		private var pt_preferredLocation:Point;
 		private var rect_visibleRegion:Rectangle;
 		public function DefaultPanelList() 
 		{
 			super();
+			addEventListener(MouseEvent.CLICK, dispatchShowPanel)
 			addEventListener(MouseEvent.DOUBLE_CLICK, dispatchDock)
 			addEventListener(MouseEvent.MOUSE_DOWN, startDispatchDrag)
-			addEventListener(MouseEvent.CLICK, dispatchShowPanel)
 			addEventListener(NativeDragEvent.NATIVE_DRAG_OVER, onDragOver)
 			addEventListener(NativeDragEvent.NATIVE_DRAG_DROP, onDragDrop)
 			rect_visibleRegion = new Rectangle()
 			vec_tabs = new Vector.<PanelTab>()
 			pt_preferredLocation = new Point()
 			vec_panels = new Vector.<IPanel>()
+			tf_panelName = new TextField()
 			doubleClickEnabled = true
 			redraw(100, 100)
 		}
@@ -162,6 +185,12 @@ package airdock.impl.ui
 				vec_tabs[i].deactivate()
 			}
 			tab.activate()
+			
+			var panelName:String = vec_panels[index].panelName
+			if(!panelName) {
+				panelName = "";
+			}
+			tf_panelName.text = panelName
 		}
 		
 		private function dispatchDock(evt:MouseEvent):void
@@ -202,6 +231,8 @@ package airdock.impl.ui
 			graphics.beginFill(ACTIVATED_COLOR, 1)
 			graphics.drawRect(0, height - barHeight, width - 1, barHeight)
 			graphics.endFill()
+			tf_panelName.width = width;
+			tf_panelName.height = barHeight;
 			for (var i:uint = 0, currX:Number = 0; i < vec_tabs.length; ++i)
 			{
 				var currTab:PanelTab = vec_tabs[i];
@@ -345,6 +376,9 @@ internal class PanelTab extends Sprite
 	}
 	public function setTabName(name:String):void
 	{
+		if(!name) {
+			name = "";
+		}
 		tf_panelName.text = name;
 		redraw(tf_panelName.width + 8, tf_panelName.height + 4)
 	}

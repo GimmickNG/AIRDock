@@ -62,8 +62,11 @@ package airdock
 	[Event(name = "pcPanelStateToggled", type = "airdock.events.PanelContainerStateEvent")]
 	
 	/**
-	 * ...
+	 * Implementation of ICustomizableDocker (and by extension, IBasicDocker) which manages the main docking panels mechanism.
+	 * 
 	 * @author Gimmick
+	 * @see	airdock.interfaces.docking.IBasicDocker
+	 * @see	airdock.interfaces.docking.ICustomizableDocker
 	 */
 	public final class AIRDock implements ICustomizableDocker
 	{
@@ -72,11 +75,12 @@ package airdock
 			ALLOWED_DRAG_ACTIONS.allowLink = ALLOWED_DRAG_ACTIONS.allowCopy = false;
 		};
 		
-		private var cl_defaultWindowOptions:NativeWindowInitOptions
-		private var dsp_mainContainer:DisplayObjectContainer
-		private var cl_dispatcher:IEventDispatcher
-		private var cl_dragStruct:DragInformation
-		private var dct_containers:Dictionary
+		private var cl_defaultWindowOptions:NativeWindowInitOptions;
+		private var dsp_mainContainer:DisplayObjectContainer;
+		private var cl_dispatcher:IEventDispatcher;
+		private var cl_dragStruct:DragInformation;
+		private var dct_containers:Dictionary;
+		private var i_crossDockingPolicy:int;
 		private var dct_windows:Dictionary;
 		private var num_thumbHeight:Number;
 		private var num_thumbWidth:Number;
@@ -85,13 +89,12 @@ package airdock
 		private var cl_dockFormat:IDockFormat;
 		private var plc_dropTarget:IContainer;
 		private var dct_panelStateInfo:Dictionary;
+		private var dct_foreignCounter:Dictionary;
 		private var cl_treeResolver:ITreeResolver;
 		private var cl_panelFactory:IPanelFactory;
 		private var cl_panelListFactory:IPanelListFactory;
 		private var cl_containerFactory:IContainerFactory;
 		private var cl_defaultContainerOptions:ContainerConfig;
-		private var dct_foreignCounter:Dictionary;
-		private var i_crossDockingPolicy:int;
 		public function AIRDock() {
 			init()
 		}
@@ -301,7 +304,7 @@ package airdock
 					{
 						//selects the first panel* and docks all the panels in the current container to the parked container's window
 						//when it gets added to stage, if there's a violation in crossDocking policy
-						//*note - it can be any panel from the list of panels, since they are all being docked to the same container
+						//note - it can be any panel from the list of panels, since they are all being docked to the same container
 						var i:uint
 						var currPanel:IPanel;
 						var parkedContainer:IContainer
@@ -385,10 +388,16 @@ package airdock
 			return dct_windows[panel] ||= ((createIfNotExist && createWindow(panel)) as NativeWindow)
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function getPanelWindow(panel:IPanel):NativeWindow {
 			return getWindowFromPanel(panel, !isForeignPanel(panel))
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function getContainerWindow(container:IContainer):NativeWindow
 		{
 			var tempContainer:IContainer = cl_treeResolver.findRootContainer(container)
@@ -401,10 +410,16 @@ package airdock
 			return null;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function getWindowContainer(window:NativeWindow):IContainer {
 			return getContainerFromWindow(window, false)
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function getWindowPanel(window:NativeWindow):IPanel
 		{
 			for (var panel:Object in dct_windows)
@@ -416,6 +431,9 @@ package airdock
 			return null;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function getPanelStateInfo(panel:IPanel):IReadablePanelStateInformation {
 			return getInternalPanelStateInfo(panel) as IReadablePanelStateInformation
 		}
@@ -570,10 +588,10 @@ package airdock
 					return;
 				}
 				
-				if (!PanelContainerSide.isComplementary(container.currentSideCode, side)) {
+				if (!PanelContainerSide.isComplementary(container.sideCode, side)) {
 					return;
 				}
-				else while(container && (!PanelContainerSide.isComplementary(container.currentSideCode, side) || container.currentSideCode == side)) {
+				else while(container && (!PanelContainerSide.isComplementary(container.sideCode, side) || container.sideCode == side)) {
 					container = cl_treeResolver.findParentContainer(container as DisplayObject)
 				}
 				if (container)
@@ -738,14 +756,14 @@ package airdock
 				}
 				return result
 			}
-			var currentSideCode:int = inContainer.currentSideCode
+			var sideCode:int = inContainer.sideCode
 			if (inContainer.hasSides)
 			{
-				result = getFirstPanel(excluding, inContainer.getSide(currentSideCode))
+				result = getFirstPanel(excluding, inContainer.getSide(sideCode))
 				if(result && result != excluding) {
 					return result
 				}
-				result = getFirstPanel(excluding, inContainer.getSide(PanelContainerSide.getComplementary(currentSideCode)))
+				result = getFirstPanel(excluding, inContainer.getSide(PanelContainerSide.getComplementary(sideCode)))
 				if(result && result != excluding) {
 					return result
 				}
@@ -1063,6 +1081,9 @@ package airdock
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function getPanelWindows():Vector.<IPair>
 		{
 			var panelWindows:Vector.<IPair> = new Vector.<IPair>()
@@ -1075,6 +1096,9 @@ package airdock
 			return panelWindows
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function getPanelContainers():Vector.<IPair>
 		{
 			var panelContainers:Vector.<IPair> = new Vector.<IPair>()
@@ -1087,20 +1111,32 @@ package airdock
 			return panelContainers
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function setupPanel(panel:IPanel):void
 		{
 			dct_foreignCounter[panel] = true;
 			addPanelListeners(panel)
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function setupWindow(window:NativeWindow):void {
 			addWindowListeners(window)
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function unhookWindow(window:NativeWindow):void {
 			removeWindowListeners(window)
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function unhookPanel(panel:IPanel):void
 		{
 			if(!panel) {
@@ -1111,6 +1147,9 @@ package airdock
 			removePanelListeners(panel)
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function createPanel(options:PanelConfig):IPanel
 		{
 			var panel:IPanel = cl_panelFactory.createPanel(options)
@@ -1118,6 +1157,9 @@ package airdock
 			return panel
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function createWindow(panel:IPanel):NativeWindow
 		{
 			if(!panel) {
@@ -1142,6 +1184,9 @@ package airdock
 			return window
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function createContainer(options:ContainerConfig):IContainer
 		{
 			var container:IContainer = cl_containerFactory.createContainer(options)
@@ -1151,6 +1196,9 @@ package airdock
 			return container
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function setPanelFactory(panelFactory:IPanelFactory):void
 		{
 			if(!panelFactory) {
@@ -1161,6 +1209,9 @@ package airdock
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function setContainerFactory(containerFactory:IContainerFactory):void 
 		{
 			if(!containerFactory) {
@@ -1171,6 +1222,9 @@ package airdock
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function setPanelListFactory(panelListFactory:IPanelListFactory):void
 		{
 			cl_panelListFactory = panelListFactory
@@ -1191,8 +1245,7 @@ package airdock
 		}
 		
 		/**
-		 * Sets the dock helper UI for allowing the user to dock panels and containers.
-		 * Setting this to null will effectively prevent the user from docking panels and containers, but will not prevent programmatic docking.
+		 * @inheritDoc
 		 */
 		public function set dockHelper(dockHelper:IDockHelper):void
 		{
@@ -1216,6 +1269,9 @@ package airdock
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function set resizeHelper(resizer:IResizer):void
 		{
 			var prevSizer:DisplayObject = cl_resizer as DisplayObject
@@ -1233,6 +1289,9 @@ package airdock
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function dockPanel(panel:IPanel):IContainer
 		{
 			var basePanelWindow:NativeWindow = getWindowFromPanel(panel, true)
@@ -1244,6 +1303,9 @@ package airdock
 			return baseContainer
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function showPanel(panel:IPanel):void
 		{
 			if(!panel) {
@@ -1267,6 +1329,9 @@ package airdock
 			dispatchEvent(new PanelContainerStateEvent(PanelContainerStateEvent.VISIBILITY_TOGGLED, panel, cl_treeResolver.findParentContainer(panel as DisplayObject), false, true, false, false))
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function hidePanel(panel:IPanel):void
 		{
 			if(!panel) {
@@ -1289,10 +1354,13 @@ package airdock
 			dispatchEvent(new PanelContainerStateEvent(PanelContainerStateEvent.VISIBILITY_TOGGLED, panel, container, true, false, false, false))
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function integratePanelToContainer(panel:IPanel, container:IContainer, side:int):IContainer
 		{
 			var panelContainer:IContainer = cl_treeResolver.findParentContainer(panel as DisplayObject)
-			if(panelContainer && container == panelContainer && side == container.currentSideCode) {
+			if(panelContainer && container == panelContainer && side == container.sideCode) {
 				return container
 			}
 			//false for the two below since we're comparing
@@ -1316,6 +1384,9 @@ package airdock
 			return newSide
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function isPanelVisible(panel:IPanel):Boolean
 		{
 			if(!panel) {
@@ -1331,18 +1402,30 @@ package airdock
 			return !!container.stage
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function set crossDockingPolicy(policyFlags:int):void {
 			i_crossDockingPolicy = policyFlags
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function get crossDockingPolicy():int {
 			return i_crossDockingPolicy
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function get mainContainer():DisplayObjectContainer {
 			return dsp_mainContainer;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function set mainContainer(container:DisplayObjectContainer):void
 		{
 			if (dsp_mainContainer)
@@ -1358,18 +1441,31 @@ package airdock
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function get dragImageHeight():Number {
 			return num_thumbHeight
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function set dragImageHeight(value:Number):void {
 			num_thumbHeight = value;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function get dragImageWidth():Number {
 			return num_thumbWidth
 		}
 		
+		/**
+		 * Unloads all the windows and removes all listeners and other references of the panels registered to this Docker.
+		 * Once this method is called, it is advised not to use the Docker instance again, and to create a new one instead.
+		 */
 		public function unload():void
 		{
 			var obj:Object;
@@ -1391,14 +1487,23 @@ package airdock
 			dockHelper = null;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function set dragImageWidth(value:Number):void {
 			num_thumbWidth = value
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function get defaultWindowOptions():NativeWindowInitOptions {
 			return cl_defaultWindowOptions;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function set defaultWindowOptions(value:NativeWindowInitOptions):void
 		{
 			if(!value) {
@@ -1409,10 +1514,16 @@ package airdock
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function get defaultContainerOptions():ContainerConfig {
 			return cl_defaultContainerOptions;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function set defaultContainerOptions(value:ContainerConfig):void 
 		{
 			if(!value) {
@@ -1423,10 +1534,16 @@ package airdock
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function get dockFormat():IDockFormat {
 			return cl_dockFormat;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function set dockFormat(value:IDockFormat):void 
 		{
 			if(!value) {
@@ -1437,6 +1554,9 @@ package airdock
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function set treeResolver(value:ITreeResolver):void 
 		{
 			if(!value) {
@@ -1447,23 +1567,37 @@ package airdock
 			}
 		}
 		
-		/* DELEGATE flash.events.IEventDispatcher */		
+		/**
+		 * @inheritDoc
+		 */
 		public function addEventListener(type:String, listener:Function, useCapture:Boolean = false, priority:int = 0, useWeakReference:Boolean = false):void {
 			cl_dispatcher.addEventListener(type, listener, useCapture, priority, useWeakReference);
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function dispatchEvent(event:Event):Boolean {
 			return cl_dispatcher.dispatchEvent(event);
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function hasEventListener(type:String):Boolean {
 			return cl_dispatcher.hasEventListener(type);
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function removeEventListener(type:String, listener:Function, useCapture:Boolean = false):void {
 			cl_dispatcher.removeEventListener(type, listener, useCapture);
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function willTrigger(type:String):Boolean {
 			return cl_dispatcher.willTrigger(type);
 		}
@@ -1484,11 +1618,12 @@ package airdock
 		}
 		
 		/**
-		 * Get authoritative container state from root container:
-		 * 	a container that is part of a docked container will be docked
-		 * 	and a container that is part of an integrated container will be integrated
-		 * @param	container
-		 * @return	The state of the container.
+		 * Gets the authoritative state of the container, by querying the root container's state.
+		 * If the root container is a parked container, then it is most likely DOCKED; 
+		 * otherwise, it is most likely INTEGRATED (assuming no changes have been made manually to the state)
+		 * @param	container	The container to get the authoritative state of.
+		 * @return	The authoritative state of the container.
+		 * @see	airdock.enums.PanelContainerState
 		 */
 		[Inline]
 		private function getAuthoritativeContainerState(container:IContainer):Boolean
@@ -1497,27 +1632,42 @@ package airdock
 			return root && root.containerState	
 		}
 		
+		/**
+		 * Checks whether AIRDock is supported on the target runtime or not.
+		 * Use this method to determine whether AIRDock is supported on the target runtime before creating an instance via the create() method.
+		 * However, in general, any system which supports both the NativeWindow and NativeDragManager class will support AIRDock as well.
+		 * @see #create()
+		 */
 		public static function get isSupported():Boolean {
 			return NativeWindow.isSupported && NativeDragManager.isSupported;
 		}
 		
-		public static function create(options:DockConfig):ICustomizableDocker
+		/**
+		 * Creates an AIRDock instance, based on the supplied configuration, if supported. To check whether it is supported, see the static isSupported() method.
+		 * It is advised to use this method to create a new AIRDock instance rather than creating it via the new() operator.
+		 * @param	config	A DockConfig instance representing the configuration options that must be used when creating the new AIRDock instance.
+		 * @throws	ArgumentError If either the configuration is null, or any of the mainContainer, defaultWindowOptions, or treeResolver attributes are null in the configuration.
+		 * @throws	IllegalOperationError If AIRDock is not supported on the target system. To check whether it is supported, see the static isSupported() method.
+		 * @return	An AIRDock instance as an ICustomizableDocker.
+		 * @see	#isSupported
+		 */
+		public static function create(config:DockConfig):ICustomizableDocker
 		{
-			if (!(options && options.mainContainer && options.defaultWindowOptions && options.treeResolver))
+			if (!(config && config.mainContainer && config.defaultWindowOptions && config.treeResolver))
 			{
 				var reason:String = "Invalid options: "
-				if(!options) {
+				if(!config) {
 					reason += "Options must be non-null."
 				}
 				else 
 				{
-					if(!options.mainContainer) {
+					if(!config.mainContainer) {
 						reason += "Option mainContainer must be a non-null value. ";
 					}
-					if(!options.defaultWindowOptions) {
+					if(!config.defaultWindowOptions) {
 						reason += "Option defaultWindowOptions must be a non-null value. ";
 					}
-					if(!options.treeResolver) {
+					if(!config.treeResolver) {
 						reason += "Option treeResolver must be a non-null value. ";
 					}
 				}
@@ -1527,24 +1677,24 @@ package airdock
 				throw new IllegalOperationError("Error: AIRDock is not supported on the current system.");
 			}
 			var dock:AIRDock = new AIRDock()
-			dock.setPanelFactory(options.panelFactory)
-			dock.setPanelListFactory(options.panelListFactory)
-			dock.setContainerFactory(options.containerFactory)
-			dock.defaultWindowOptions = options.defaultWindowOptions
-			dock.defaultContainerOptions = options.defaultContainerOptions
-			dock.crossDockingPolicy = options.crossDockingPolicy
-			dock.mainContainer = options.mainContainer
-			dock.treeResolver = options.treeResolver
-			dock.resizeHelper = options.resizeHelper
-			dock.dockFormat = options.dockFormat
-			dock.dockHelper = options.dockHelper
+			dock.setPanelFactory(config.panelFactory)
+			dock.setPanelListFactory(config.panelListFactory)
+			dock.setContainerFactory(config.containerFactory)
+			dock.defaultWindowOptions = config.defaultWindowOptions
+			dock.defaultContainerOptions = config.defaultContainerOptions
+			dock.crossDockingPolicy = config.crossDockingPolicy
+			dock.mainContainer = config.mainContainer
+			dock.treeResolver = config.treeResolver
+			dock.resizeHelper = config.resizeHelper
+			dock.dockFormat = config.dockFormat
+			dock.dockHelper = config.dockHelper
 			if (dock.mainContainer.stage) {
 				dock.defaultWindowOptions.owner = dock.mainContainer.stage.nativeWindow
 			}
-			if (!(isNaN(options.dragImageWidth) || isNaN(options.dragImageHeight)))
+			if (!(isNaN(config.dragImageWidth) || isNaN(config.dragImageHeight)))
 			{
-				dock.dragImageHeight = options.dragImageHeight
-				dock.dragImageWidth = options.dragImageWidth
+				dock.dragImageHeight = config.dragImageHeight
+				dock.dragImageWidth = config.dragImageWidth
 			}
 			return dock as ICustomizableDocker
 		}

@@ -126,7 +126,7 @@ package airdock.interfaces.docking
 		 * Some implementations also have a complementary container created as well, which is complementary to the current side code.
 		 * @see airdock.enums.PanelContainerSide
 		 */
-		function get currentSideCode():int
+		function get sideCode():int
 		
 		/**
 		 * An IPanelList instance created by the Docker's IPanelListFactory for this container.
@@ -215,6 +215,7 @@ package airdock.interfaces.docking
 		 * In that case, use the tree resolver of the Docker instance to find the root container, whose container state is the actual container state.
 		 * 
 		 * While this value can be changed, it is advised not to do so, as changing it without caution can result in unexpected behavior.
+		 * @private
 		 */
 		function set containerState(value:Boolean):void
 	}

@@ -3,8 +3,9 @@ package airdock.impl
 	import airdock.interfaces.docking.IDockFormat;
 	
 	/**
-	 * ...
-	 * @author Gimmick
+	 * Default IDockFormat implementation.
+	 * @author	Gimmick
+	 * @see	airdock.interfaces.docking.IDockFormat
 	 */
 	public final class DefaultDockFormat implements IDockFormat 
 	{

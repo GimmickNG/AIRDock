@@ -12,8 +12,12 @@ package airdock.impl
 	import airdock.interfaces.ui.IPanelList;
 	
 	/**
-	 * ...
+	 * Default implementation for the IContainerFactory, IPanelFactory, and IPanelListFactory interfaces.
+	 * 
 	 * @author Gimmick
+	 * @see	airdock.interfaces.factories.IPanelFactory
+	 * @see	airdock.interfaces.factories.IContainerFactory
+	 * @see	airdock.interfaces.factories.IPanelListFactory
 	 */
 	public final class DefaultMultiFactory implements IContainerFactory, IPanelFactory, IPanelListFactory, IFactory
 	{

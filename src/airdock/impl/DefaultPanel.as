@@ -25,8 +25,10 @@ package airdock.impl
 	[Event(name="ppcPropertyChange", type="airdock.events.PanelPropertyChangeEvent")]
 	
 	/**
-	 * ...
-	 * @author Gimmick
+	 * Default IPanel implementation. Is a container with a background color which can be changed on demand.
+	 * 
+	 * @author	Gimmick
+	 * @see	airdock.interfaces.docking.IPanel
 	 */
 	public class DefaultPanel extends Sprite implements IPanel
 	{

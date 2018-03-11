@@ -22,8 +22,15 @@ package airdock.impl.ui
 	[Event(name = "pcContainerResized", type = "airdock.events.PanelContainerEvent")]
 	
 	/**
-	 * ...
-	 * @author Gimmick
+	 * Default IResizer implementation.
+	 * 
+	 * Shows a black bar which is either horizontal or vertical whenever a container resize operation 
+	 * is about to take place (i.e. when the user brings the cursor near the edge of the container)
+	 * 
+	 * Also shows the side which is going to be resized.
+	 * 
+	 * @author	Gimmick
+	 * @see	airdock.interfaces.ui.IResizer
 	 */
 	public class DefaultResizer extends Sprite implements IResizer
 	{
@@ -39,6 +46,7 @@ package airdock.impl.ui
 			rect_orientation = new Rectangle()
 			addEventListener(MouseEvent.MOUSE_DOWN, startResize, false, 0, true)
 		}
+		
 		private function startResize(evt:MouseEvent):void 
 		{
 			removeEventListener(MouseEvent.MOUSE_DOWN, startResize)

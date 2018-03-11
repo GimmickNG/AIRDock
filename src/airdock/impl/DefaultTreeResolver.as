@@ -6,9 +6,15 @@ package airdock.impl
 	import airdock.interfaces.docking.ITreeResolver;
 	import flash.display.DisplayObject;
 	import flash.display.DisplayObjectContainer;
+	
 	/**
-	 * ...
+	 * Default ITreeResolver implementation. 
+	 * 
+	 * Uses the implicit display list to resolve the relationships between containers and other display objects; 
+	 * an alternate implementation may involve using explicit parent references in IContainers for use by the resolver.
+	 * 
 	 * @author Gimmick
+	 * @see	airdock.interfaces.docking.ITreeResolver
 	 */
 	public final class DefaultTreeResolver implements ITreeResolver
 	{
@@ -72,7 +78,7 @@ package airdock.impl
 			{
 				if (parent.hasSides)
 				{
-					currSide = parent.currentSideCode
+					currSide = parent.sideCode
 					sideObj = parent.getSide(currSide)
 					if(sideObj && sideObj.contains(displayObject)) {
 						resultArr.push(SIDE_TO_STRING[currSide])

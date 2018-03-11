@@ -17,12 +17,16 @@ package airdock.impl.ui
 	[Event(name="deDragCompleting", type="airdock.events.DockEvent")]
 	
 	/**
-	 * ...
+	 * Default IDockHelper implementation. 
+	 * 
+	 * Provides a cross-shaped interface which allows the user to integrate panels or containers onto the left, right, top and bottom.
+	 * 
 	 * @author Gimmick
+	 * @see airdock.interfaces.ui.IDockHelper
 	 */
 	public class DefaultDockHelper extends Sprite implements IDockHelper
 	{
-		private var spr_centerShape:Sprite
+		private var spr_centerShape:Sprite;
 		private var spr_leftShape:Sprite;
 		private var spr_rightShape:Sprite;
 		private var spr_topShape:Sprite;
@@ -45,6 +49,9 @@ package airdock.impl.ui
 			addEventListener(NativeDragEvent.NATIVE_DRAG_OVER, displayDockHandlesOnDrag, false, 0, true)
 		}
 		
+		/**
+		 * Dispatches a DockEvent when the user has dropped the panel or container on any of the sprites of this object, prior to the end of the drag-dock action.
+		 */
 		private function acceptDragDrop(evt:NativeDragEvent):void {
 			dispatchEvent(new DockEvent(DockEvent.DRAG_COMPLETING, evt.clipboard, evt.target as DisplayObject, true, true))
 		}
@@ -99,7 +106,7 @@ package airdock.impl.ui
 		public function draw(width:Number, height:Number):void
 		{
 			var currGraphics:Graphics;
-			var squareSize:Number = width / 3
+			var squareSize:Number = (width + height) / 6
 			currGraphics = spr_centerShape.graphics
 			currGraphics.clear()
 			currGraphics.beginFill(0, 1)
