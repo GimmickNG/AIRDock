@@ -540,9 +540,9 @@ package airdock.impl
 		 */
 		public function removePanel(panel:IPanel):IContainer
 		{
-			var result:IContainer = findPanel(panel)
+			var result:IContainer = findPanel(panel);
 			if (result) {
-				result.removePanel(panel)
+				result.removeChild(panel as DisplayObject);
 			}
 			return result;
 		}
