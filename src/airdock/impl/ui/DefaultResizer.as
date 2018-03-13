@@ -126,6 +126,22 @@ package airdock.impl.ui
 			graphics.clear()
 			graphics.beginFill(0, 1)
 			graphics.drawRect(0, 0, rect_orientation.width, rect_orientation.height)
+			var tempSideCode:int = sideCode
+			switch(tempSideCode)
+			{
+				case PanelContainerSide.LEFT:
+					graphics.drawRect(rect_orientation.width, ((rect_orientation.height * 0.5) - 8), 8, 16);
+					break;
+				case PanelContainerSide.RIGHT:
+					graphics.drawRect(-8, ((rect_orientation.height * 0.5) - 8), 8, 16);
+					break;
+				case PanelContainerSide.TOP:
+					graphics.drawRect(((rect_orientation.width * 0.5) - 8), rect_orientation.height, 16, 8);
+					break;
+				case PanelContainerSide.BOTTOM:
+					graphics.drawRect(((rect_orientation.width * 0.5) - 8), -8, 16, 8);
+					break;	
+			}
 			graphics.endFill()
 			i_sideCode = sideCode
 		}

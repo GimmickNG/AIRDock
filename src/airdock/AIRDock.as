@@ -137,6 +137,12 @@ package airdock
 				default:
 					return;
 			}
+			if(currContainer.maxSideSize < 1) {
+				maxSize *= currContainer.maxSideSize
+			}
+			else if(maxSize > currContainer.maxSideSize) {
+				maxSize = currContainer.maxSideSize
+			}
 			if (0 < value && value < maxSize) {
 				currContainer.sideSize = value
 			}
@@ -385,7 +391,10 @@ package airdock
 			if(!panel) {
 				return null;
 			}
-			return dct_windows[panel] ||= ((createIfNotExist && createWindow(panel)) as NativeWindow)
+			else if(!dct_windows[panel] && createIfNotExist) {
+				dct_windows[panel] = createWindow(panel)
+			}
+			return dct_windows[panel] as NativeWindow
 		}
 		
 		/**
@@ -554,31 +563,22 @@ package airdock
 			if (container)
 			{
 				var side:int;
+				var point:Point;
 				var tolerance:Number = cl_resizer.tolerance
-				var point:Point = new Point(targetContainer.x, targetContainer.y)
 				var localXPercent:Number = targetContainer.mouseX / targetContainer.width
 				var localYPercent:Number = targetContainer.mouseY / targetContainer.height
-				if (localXPercent <= tolerance || localXPercent >= (1 - tolerance))
-				{
-					point.x += Math.round(localXPercent) * targetContainer.width
-					point.y += cl_resizer.preferredYPercentage * targetContainer.height
-					if (localXPercent <= tolerance) {
-						side = PanelContainerSide.LEFT
-					}
-					else {
-						side = PanelContainerSide.RIGHT
-					}
+				
+				if (localXPercent <= tolerance) {
+					side = PanelContainerSide.LEFT
 				}
-				else if (localYPercent <= tolerance || localYPercent >= (1 - tolerance))
-				{
-					point.y += Math.round(localYPercent) * targetContainer.height
-					point.x += cl_resizer.preferredXPercentage * targetContainer.width
-					if (localYPercent <= tolerance) {
-						side = PanelContainerSide.TOP
-					}
-					else {
-						side = PanelContainerSide.BOTTOM
-					}
+				else if(localXPercent >= (1 - tolerance)) {
+					side = PanelContainerSide.RIGHT
+				}
+				else if (localYPercent <= tolerance) {
+					side = PanelContainerSide.TOP
+				}
+				else if(localYPercent >= (1 - tolerance)) {
+					side = PanelContainerSide.BOTTOM
 				}
 				else 
 				{
@@ -588,13 +588,83 @@ package airdock
 					return;
 				}
 				
-				if (!PanelContainerSide.isComplementary(container.sideCode, side)) {
-					return;
+				/* HOW THE RESIZER IS RESOLVED WITH RESPECT TO CONTAINERS:
+				 * go up a container until it is complementary:
+				 * targetContainer: check if the container's side code is T or B. then, if it is the same as targetContainer's side code
+				 * for the given containers:
+				 *    |------|----|   -|
+				 *    |      | T  |    |
+				 *    |   L  |----|    }- B
+				 *    |      | B  |    |
+				 *    |------|----|   -|
+				 * 
+				 *    |-----v-----|
+				 *          |
+				 *          R
+				 * 
+				 * suppose targetContainer is T as labeled above and need to find resizer below it
+				 * side code of container = B. target container does not match, i.e. container.getSide(container.sideCode) != targetContainer
+				 * (but is complementary)
+				 * so display the resizer only if the side is bottom, i.e. same as container side code
+				 * 
+				 * suppose targetContainer is B as labeled above and need to find resizer above it
+				 * side code of container = B. target container matches, i.e. container.getSide(container.sideCode) == targetContainer
+				 * so display the resizer only if the side is top, i.e. complementary (but not equal) of container side code
+				 * 
+				 * suppose targetContainer is B or T as labeled above, and need to find resizer left of it
+				 * side code of container = B. not complementary or equal, so skip up and set container = parent container, and targetContainer = container
+				 * now parent container side code = R. container matches now, i.e. container.getSide(container.sideCode) == targetContainer
+				 * so display the resizer only if the side is left, i.e. complementary (but not equal) of container side code
+				 * 
+				 * suppose targetContainer is L as labeled above and need to find resizer to the right of it
+				 * side code of container = R. target container does not match i.e. container.getSide(container.sideCode) != targetContainer
+				 * (but is complementary)
+				 * so display the resizer only if side is right, i.e. same as container side code.
+				 * 
+				 * in all the above cases, there is a similarity:
+				 * 
+				 * 1. get targetContainer
+				 * 2. is container.getSide(container.sideCode) == targetContainer?
+				 * 		if yes, then display resizer only if the side is complementary - but not equal - of container side code
+				 * 3. else, is the side code of container at least complementary or equal to target container?
+				 * 		if yes, then display resizer only if the side is equal to the container side code
+				 * 4. else, if it is neither same nor complementary (e.g. L and B or R and T)
+				 * 		then set targetContainer as current container and skip currentcontainer up one level
+				 * 
+				 * see implementation below.
+				 */
+				
+				var displayResizer:Boolean;
+				while (container)
+				{
+					if (PanelContainerSide.isComplementary(side, container.sideCode))
+					{
+						var sidesMatch:Boolean = (side == container.sideCode);
+						var targetContainerEqual:Boolean = (container.getSide(container.sideCode) == targetContainer);
+						//i.e. targetContainerEqual xor sidesMatch
+						displayResizer = targetContainerEqual != sidesMatch;
+						break;
+					}
+					else
+					{
+						targetContainer = container;
+						container = cl_treeResolver.findParentContainer(container as DisplayObject);
+					}
 				}
-				else while(container && (!PanelContainerSide.isComplementary(container.sideCode, side) || container.sideCode == side)) {
-					container = cl_treeResolver.findParentContainer(container as DisplayObject)
+				
+				point = new Point(targetContainer.x, targetContainer.y)
+				if (side == PanelContainerSide.TOP || side == PanelContainerSide.BOTTOM)
+				{
+					point.y += Math.round(localYPercent) * targetContainer.height
+					point.x += cl_resizer.preferredXPercentage * targetContainer.width
 				}
-				if (container)
+				else
+				{
+					point.x += Math.round(localXPercent) * targetContainer.width
+					point.y += cl_resizer.preferredYPercentage * targetContainer.height
+				}
+				
+				if (container && displayResizer)
 				{
 					cl_resizer.maxSize = container.getBounds(null)
 					point = container.localToGlobal(point)
@@ -904,7 +974,10 @@ package airdock
 		private function addPanelToSides(panel:IPanel, container:IContainer, sideCode:String):IContainer
 		{
 			for (var i:uint = 0, currContainer:IContainer = container; currContainer && i < sideCode.length; ++i) {
-				currContainer = currContainer.addToSide(PanelContainerSide.toInteger(sideCode.charAt(i)), panel)
+				currContainer = currContainer.fetchSide(PanelContainerSide.toInteger(sideCode.charAt(i)))
+			}
+			if(currContainer) {
+				currContainer.addToSide(PanelContainerSide.FILL, panel);
 			}
 			return currContainer
 		}
