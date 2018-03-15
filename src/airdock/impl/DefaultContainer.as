@@ -133,7 +133,7 @@ package airdock.impl
 			}
 			else
 			{
-				var panelArray:Vector.<IPanel> = panels;
+				var panelArray:Vector.<IPanel> = getPanels(false);
 				for (var i:uint = 0; i < panelArray.length; ++i) {
 					removePanel(panelArray[i])
 				}
@@ -180,7 +180,7 @@ package airdock.impl
 			cl_panelList = panelList
 			if (panelList)
 			{
-				var panelArray:Vector.<IPanel> = panels;
+				var panelArray:Vector.<IPanel> = getPanels(false);
 				for (var i:uint = 0; i < panelArray.length; ++i) {
 					panelList.addPanel(panelArray[i]);
 				}
@@ -228,12 +228,18 @@ package airdock.impl
 			panelList.addEventListener(PanelContainerEvent.SHOW_REQUESTED, bumpPanelToTop, false, 0, true)
 		}
 		
-		private function removePanelOnEvent(evt:PanelContainerEvent):void {
-			removePanel(evt.relatedPanel)
+		private function removePanelOnEvent(evt:PanelContainerEvent):void
+		{
+			if(!evt.isDefaultPrevented()) {
+				removePanel(evt.relatedPanel)
+			}
 		}
 		
 		private function bumpPanelToTop(evt:PanelContainerEvent):void
 		{
+			if(evt.isDefaultPrevented()) {
+				return;
+			}
 			var panel:IPanel = evt.relatedPanel
 			if (panel && panel.parent == this) {
 				setChildIndex(panel as DisplayObject, numChildren - 1)
@@ -246,6 +252,9 @@ package airdock.impl
 		private function sendDockPanelRequest(evt:PanelContainerEvent):void
 		{
 			evt.stopImmediatePropagation()
+			if(evt.isDefaultPrevented()) {
+				return;
+			}
 			dispatchEvent(new PanelContainerEvent(evt.type, evt.relatedPanel, this, true, false))
 			
 			//for the listeners registered - DRAG and STATE_TOGGLE the relatedPanel is
@@ -254,7 +263,7 @@ package airdock.impl
 			//in which case there is no need to show the last panel in the UIPanelList.
 			if (evt.relatedPanel)
 			{
-				var panelList:Vector.<IPanel> = panels;
+				var panelList:Vector.<IPanel> = getPanels(false);
 				if (panelList.length) {	//shows the other panel in the UIPanelList
 					(evt.currentTarget as IPanelList).showPanel(panelList.shift())
 				}
@@ -309,22 +318,7 @@ package airdock.impl
 			if(container == this) {
 				return;
 			}
-			//remove listener since we don't want this to occur while we're anyways emptying the container
-			removeChildUpdateListeners()
-			var k:int;
-			while(k < numChildren)
-			{
-				var currChild:DisplayObject = getChildAt(k)
-				if (currChild == displayablePanelList || currChild == currentSide || currChild == otherSide)
-				{
-					++k;
-					continue;
-				}
-				container.addChild(currChild)
-			}
-			vec_panels.length = 0;	//since all children have been removed but vec_panels has not been updated
-			addChildUpdateListeners()
-			if (hasSides == container.hasSides && currentSide && otherSide && PanelContainerSide.isComplementary(sideCode, container.sideCode))
+			else if (hasSides == container.hasSides && currentSide && otherSide && PanelContainerSide.isComplementary(sideCode, container.sideCode))
 			{
 				//merge two containers if they have same number of sides and are complementary
 				/*
@@ -336,13 +330,13 @@ package airdock.impl
 				 * 
 				 * Then, merging H into A should yield:
 				 *                 A
-				 *           B          C
-				 *       D,K   E,L  F,M   G,N
+				 *           B           C
+				 *       D,K   E,L   F,M   G,N
 				 * Or if the sides are not the same, and it has to be flipped for H prior to merging:
 				 * (assuming only the level under A has to be flipped; otherwise, recursively flip as needed)
 				 *                 A
-				 *           B          C
-				 *       D,M   E,N  F,K   G,L
+				 *           B           C
+				 *       D,M   E,N   F,K   G,L
 				 */
 				var tempCont:IContainer = currentSide, otherCont:IContainer = otherSide;
 				if (sideCode != container.sideCode)
@@ -358,6 +352,23 @@ package airdock.impl
 			else {
 				container.setContainers(sideCode, currentSide, otherSide)
 			}
+			
+			var k:int;
+			
+			//remove listener since we don't want this to occur while we're anyways emptying the container
+			removeChildUpdateListeners()
+			while(k < numChildren)
+			{
+				var currChild:DisplayObject = getChildAt(k)
+				if (currChild == displayablePanelList || currChild == currentSide || currChild == otherSide) {
+					++k;
+				}
+				else {
+					container.addChild(currChild)
+				}
+			}
+			vec_panels.length = 0;	//since all children have been removed but vec_panels has not been updated
+			addChildUpdateListeners()
 			
 			if(container.panelList is IDisplayablePanelList) {
 				container.setChildIndex(container.panelList as DisplayObject, container.numChildren - 1)
@@ -442,8 +453,19 @@ package airdock.impl
 		/**
 		 * @inheritDoc
 		 */
-		public function get panels():Vector.<IPanel> {
-			return vec_panels.concat()
+		public function getPanels(recursive:Boolean):Vector.<IPanel>
+		{
+			var result:Vector.<IPanel> = vec_panels.concat()
+			if (recursive)
+			{
+				if (currentSide) {
+					result = result.concat(currentSide.getPanels(true))
+				}
+				if (otherSide) {
+					result = result.concat(otherSide.getPanels(true))
+				}
+			}
+			return result;
 		}
 		
 		/**
@@ -599,7 +621,7 @@ package airdock.impl
 			if(!panel) {
 				return null;
 			}
-			else if (panels.indexOf(panel) != -1) {
+			else if (getPanels(false).indexOf(panel) != -1) {
 				return this;
 			}
 			else if(hasSides)
@@ -883,7 +905,7 @@ package airdock.impl
 					effY = rect.y;
 				}
 				var i:int;
-				var panelArray:Vector.<IPanel> = panels;
+				var panelArray:Vector.<IPanel> = getPanels(false);
 				for (i = panelArray.length - 1; i >= 0; --i)
 				{
 					if (!panelArray[i].resizable)

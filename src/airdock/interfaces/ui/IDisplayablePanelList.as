@@ -1,6 +1,6 @@
 package airdock.interfaces.ui 
 {
-	import airdock.interfaces.display.IDisplayObjectContainer;
+	import airdock.interfaces.display.IDisplayObject;
 	import flash.geom.Point;
 	import flash.geom.Rectangle;
 	
@@ -9,7 +9,7 @@ package airdock.interfaces.ui
 	 * Additional methods involving placement and sizing of the panel list are included here.
 	 * @author Gimmick
 	 */
-	public interface IDisplayablePanelList extends IPanelList, IDisplayObjectContainer
+	public interface IDisplayablePanelList extends IPanelList, IDisplayObject
 	{
 		/**
 		 * A Point indicating the preferred location of the current panel list, based on the max width and height specified for it.

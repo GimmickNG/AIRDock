@@ -44,7 +44,11 @@ package airdock.impl
 		{
 			var prevWidth:Number = this.width
 			var prevHeight:Number = this.height
-			if (u_color != color)
+			if((prevWidth != width && !dispatchEvent(new PanelPropertyChangeEvent(PanelPropertyChangeEvent.PROPERTY_CHANGING, "width", prevWidth, width, true, true))) || (prevHeight != height && !dispatchEvent(new PanelPropertyChangeEvent(PanelPropertyChangeEvent.PROPERTY_CHANGING, "height", prevHeight, height, true, true)))) {
+				return;
+			}
+			
+			if (u_color != color && dispatchEvent(new PanelPropertyChangeEvent(PanelPropertyChangeEvent.PROPERTY_CHANGING, "backgroundColor", prevColor, color, true, true)))
 			{
 				var prevColor:uint = u_color;
 				u_color = color;
@@ -100,7 +104,7 @@ package airdock.impl
 		 */
 		public function set panelName(value:String):void
 		{
-			if (str_panelName != value)
+			if (str_panelName != value && dispatchEvent(new PanelPropertyChangeEvent(PanelPropertyChangeEvent.PROPERTY_CHANGING, "panelName", prevValue, value, true, true)))
 			{
 				var prevValue:String = str_panelName
 				str_panelName = value;
@@ -120,7 +124,7 @@ package airdock.impl
 		 */
 		public function set resizable(value:Boolean):void
 		{
-			if (b_resizable != value)
+			if (b_resizable != value && dispatchEvent(new PanelPropertyChangeEvent(PanelPropertyChangeEvent.PROPERTY_CHANGING, "resizable", !value, value, true, true)))
 			{
 				b_resizable = value;
 				dispatchEvent(new PanelPropertyChangeEvent(PanelPropertyChangeEvent.PROPERTY_CHANGED, "resizable", !value, value, true, false))

@@ -47,14 +47,12 @@ package airdock.interfaces.docking
 		/**
 		 * A Boolean indicating whether the panel is dockable or not.
 		 * Non-dockable panels cannot be removed from the root container which they are a part of, by the user.
-		 * However, it is up to the IContainer instance which it is a part of, to either respect this attribute or ignore it.
 		 */
 		function set dockable(value:Boolean):void
 		
 		/**
 		 * A Boolean indicating whether the panel is dockable or not.
 		 * Non-dockable panels cannot be removed from the root container which they are a part of, by the user.
-		 * However, it is up to the IContainer instance which it is a part of, to either respect this attribute or ignore it.
 		 */
 		function get dockable():Boolean
 	}

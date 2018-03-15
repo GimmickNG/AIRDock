@@ -1,6 +1,6 @@
 package airdock.interfaces.ui 
 {
-	import airdock.interfaces.display.IDisplayObjectContainer;
+	import airdock.interfaces.display.IDisplayObject;
 	import airdock.interfaces.docking.IDockTarget;
 	import flash.display.DisplayObject;
 	import flash.events.IEventDispatcher;
@@ -13,7 +13,7 @@ package airdock.interfaces.ui
 	 * @author Gimmick
 	 * @see airdock.interfaces.docking.IDockTarget
 	 */
-	public interface IDockHelper extends IDisplayObjectContainer, IEventDispatcher, IDockTarget
+	public interface IDockHelper extends IDisplayObject, IEventDispatcher, IDockTarget
 	{
 		/**
 		 * Hides all the IDockTarget instances. This is usually called when a user drags a panel or container outside the target container, or when it is outside the bounds of the dock helper.

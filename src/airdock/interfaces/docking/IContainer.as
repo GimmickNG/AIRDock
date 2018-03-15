@@ -111,14 +111,17 @@ package airdock.interfaces.docking
 		function hasPanels(recursive:Boolean):Boolean;
 		
 		/**
+		 * Returns a vector of all the panels directly under this container.
+		 * If recursive is specified, then the vector of panels which are in the current container's subcontainers are also retrieved, in preorder form.
+		 * @param	recursive	A Boolean indicating whether the current container's subcontainers' panels should also be checked or not.
+		 * @return	A Vector of IPanel instances, all of which are contained directly by this container and/or indirectly (i.e. by subcontainers of the current container), if recursive search is specified.
+		 */
+		function getPanels(recursive:Boolean):Vector.<IPanel>
+		
+		/**
 		 * Indicates whether the current container has any containers directly below it or not. Read-only.
 		 */
 		function get hasSides():Boolean
-		
-		/**
-		 * A vector of all the panels directly contained by this container. Read-only.
-		 */
-		function get panels():Vector.<IPanel>
 		
 		/**
 		 * The current side for this container. Read-only.

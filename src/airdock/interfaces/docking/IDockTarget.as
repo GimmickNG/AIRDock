@@ -1,13 +1,13 @@
 package airdock.interfaces.docking 
 {
-	import airdock.interfaces.display.IDisplayObject;
+	import airdock.interfaces.display.IDisplayObjectContainer;
 	import flash.display.DisplayObject;
 	
 	/**
 	 * The interface defining the function to determine which side of a container a panel is to be attached to, at the end of a drag(-drop)-dock operation.
 	 * @author Gimmick
 	 */
-	public interface IDockTarget extends IDisplayObject
+	public interface IDockTarget extends IDisplayObjectContainer
 	{
 		/**
 		 * Determines the side of the container to which the panel is to be added to, at the end of a drag-docking operation.

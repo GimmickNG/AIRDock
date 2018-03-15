@@ -25,7 +25,7 @@ package airdock.interfaces.docking
 		 * @param	side	The side to which the panel should be attached to. If it is not FILL, or is not equal or complementary to the container's current side (if it has any), then a new container is automatically created for this panel.
 		 * @return	The container into which it has been integrated into.
 		 */
-		function integratePanelToContainer(panel:IPanel, container:IContainer, side:int):IContainer
+		function movePanelToContainer(panel:IPanel, container:IContainer, side:int):IContainer
 		
 		/**
 		 * Docks a given panel to its parked container.

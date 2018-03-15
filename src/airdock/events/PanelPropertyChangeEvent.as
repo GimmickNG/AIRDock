@@ -8,6 +8,11 @@ package airdock.events
 	[Event(name="ppcPropertyChange", type="airdock.events.PanelPropertyChangeEvent")]
 	
 	/**
+	 * @eventType	airdock.events.PanelPropertyChangeEvent.PROPERTY_CHANGING
+	 */
+	[Event(name="ppcPropertyChanging", type="airdock.events.PanelPropertyChangeEvent")]
+	
+	/**
 	 * A PanelPropertyChangeEvent is usually dispatched by an IPanel instance whenever any of its properties has changed.
 	 * This is done to notify its container's IPanelList instance, amongst others, to update, in order to reflect the change in the property.
 	 * @author Gimmick
@@ -15,7 +20,12 @@ package airdock.events
 	public class PanelPropertyChangeEvent extends Event 
 	{
 		/**
+		 * The constant used to define a propertyChanged event. Is dispatched whenever a panel's property is about to change.
+		 */
+		public static const PROPERTY_CHANGING:String = "ppcPropertyChanging";
+		/**
 		 * The constant used to define a propertyChanged event. Is dispatched whenever a panel's property has changed.
+		 * Can be canceled to prevent the property from being changed.
 		 */
 		public static const PROPERTY_CHANGED:String = "ppcPropertyChange";
 		

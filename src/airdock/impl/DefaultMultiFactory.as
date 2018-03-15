@@ -38,6 +38,7 @@ package airdock.impl
 			var defaultPanel:DefaultPanel = new DefaultPanel()
 			defaultPanel.draw(options.color, options.width, options.height)
 			defaultPanel.resizable = options.resizable;
+			defaultPanel.dockable = options.dockable;
 			return defaultPanel
 		}
 		

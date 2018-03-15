@@ -11,7 +11,14 @@ package airdock.config
 		private var num_width:Number;
 		private var num_height:Number;
 		private var b_resizable:Boolean;
-		public function PanelConfig() { }
+		private var b_dockable:Boolean;
+		/**
+		 * Creates a new panel configuration instance.
+		 * By default, panels are resizable and dockable unless explicitly set otherwise.
+		 */
+		public function PanelConfig() {
+			b_resizable = b_dockable = true;
+		}
 		
 		/**
 		 * The default background color of the panel, when it is created.
@@ -70,7 +77,21 @@ package airdock.config
 		public function set resizable(value:Boolean):void {
 			b_resizable = value;
 		}
+		/**
+		 * A Boolean indicating whether the panel is dockable or not.
+		 * Non-dockable panels cannot be removed from the root container which they are a part of, by the user.
+		 */
+		public function set dockable(value:Boolean):void {
+			b_dockable = value;
+		}
 		
+		/**
+		 * A Boolean indicating whether the panel is dockable or not.
+		 * Non-dockable panels cannot be removed from the root container which they are a part of, by the user.
+		 */
+		public function get dockable():Boolean {
+			return b_dockable;
+		}
 	}
 
 }
