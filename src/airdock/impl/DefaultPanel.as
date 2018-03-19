@@ -104,9 +104,9 @@ package airdock.impl
 		 */
 		public function set panelName(value:String):void
 		{
+			var prevValue:String = str_panelName
 			if (str_panelName != value && dispatchEvent(new PanelPropertyChangeEvent(PanelPropertyChangeEvent.PROPERTY_CHANGING, "panelName", prevValue, value, true, true)))
 			{
-				var prevValue:String = str_panelName
 				str_panelName = value;
 				dispatchEvent(new PanelPropertyChangeEvent(PanelPropertyChangeEvent.PROPERTY_CHANGED, "panelName", prevValue, value, true, false))
 			}

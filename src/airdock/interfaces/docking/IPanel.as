@@ -33,14 +33,16 @@ package airdock.interfaces.docking
 		function get panelName():String
 		
 		/**
-		 * A Boolean indicating whether the panel is resizable or not. Panels which are not resizable cannot have their windows resized; any container which it is a part of cannot be resized either.
+		 * A Boolean indicating whether the panel is resizable or not.
+		 * Panels which are not resizable cannot have their windows resized; 
+		 * however, it is up to the IContainer implementation to decide whether to prevent the panel which it contains, from being resized, or not.
 		 */
 		function set resizable(value:Boolean):void
 		
 		/**
 		 * A Boolean indicating whether the panel is resizable or not.
-		 * Panels which are not resizable cannot have their windows resized; any container which it is a part of cannot be resized either.
-		 * However, it is up to the IContainer instance which it is a part of, to either respect this attribute or ignore it.
+		 * Panels which are not resizable cannot have their windows resized; 
+		 * however, it is up to the IContainer implementation to decide whether to prevent the panel which it contains, from being resized, or not.
 		 */
 		function get resizable():Boolean
 		

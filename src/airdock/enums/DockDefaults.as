@@ -2,6 +2,7 @@ package airdock.enums
 {
 	import airdock.config.ContainerConfig;
 	import airdock.config.DockConfig;
+	import airdock.config.PanelConfig;
 	import airdock.impl.DefaultDockFormat;
 	import airdock.impl.DefaultMultiFactory;
 	import airdock.impl.DefaultTreeResolver;
@@ -18,6 +19,7 @@ package airdock.enums
 	import flash.display.NativeWindowInitOptions;
 	import flash.display.NativeWindowSystemChrome;
 	import flash.display.NativeWindowType;
+	import flash.display.Stage;
 	
 	/**
 	 * The default settings for a Docker. It is advised to use this in order to meet most (basic) use cases.
@@ -61,6 +63,35 @@ package airdock.enums
 			options.defaultContainerOptions = new ContainerConfig()
 			options.defaultWindowOptions = nativeWindowOptions
 			return options
+		}
+		
+		public static function createDefaultContainerConfig(container:DisplayObjectContainer):ContainerConfig
+		{
+			var config:ContainerConfig = new ContainerConfig()
+			var width:Number, height:Number;
+			if (container is Stage)
+			{
+				width = (container as Stage).stageWidth;
+				height = (container as Stage).stageHeight;
+			}
+			else
+			{
+				height = container.height;
+				width = container.width;
+			}
+			config.height = height;
+			config.width = width;
+			return config;
+		}
+		
+		public static function createDefaultPanelConfig(container:DisplayObjectContainer):PanelConfig
+		{
+			var config:PanelConfig = new PanelConfig()
+			config.dockable = config.resizable = true;
+			config.color = Math.random() * 0xFFFFFFFF;
+			config.height = container.height;
+			config.width = container.width;
+			return config;
 		}
 	}
 }

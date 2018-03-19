@@ -345,7 +345,7 @@ package airdock.impl
 					otherCont = currentSide;
 					tempCont = otherSide;
 				}
-				
+				//TODO test this part
 				tempCont.mergeIntoContainer(container.getSide(container.sideCode))
 				otherCont.mergeIntoContainer(container.getSide(PanelContainerSide.getComplementary(container.sideCode)))
 			}
@@ -363,7 +363,10 @@ package airdock.impl
 				if (currChild == displayablePanelList || currChild == currentSide || currChild == otherSide) {
 					++k;
 				}
-				else {
+				else if(currChild is IPanel) {	//add panels through normal means
+					container.addToSide(PanelContainerSide.FILL, currChild as IPanel)
+				}
+				else {		//some other type of child object; directly add to container
 					container.addChild(currChild)
 				}
 			}
@@ -904,27 +907,8 @@ package airdock.impl
 					effX = rect.x;
 					effY = rect.y;
 				}
-				var i:int;
 				var panelArray:Vector.<IPanel> = getPanels(false);
-				for (i = panelArray.length - 1; i >= 0; --i)
-				{
-					if (!panelArray[i].resizable)
-					{
-						//this panel is not resizable; halt resizing and cancel operations
-						num_maxHeight = oldHeight
-						num_maxWidth = oldWidth
-						if (displayable)
-						{
-							displayable.maxWidth = oldWidth
-							displayable.maxHeight = oldHeight
-							preferredLocation = displayable.preferredLocation
-							dispPanelList.x = preferredLocation.x
-							dispPanelList.y = preferredLocation.y
-						}
-						return;
-					}
-				}
-				for (i = panelArray.length - 1; i >= 0; --i)
+				for (var i:int = panelArray.length - 1; i >= 0; --i)
 				{
 					var currPanel:IPanel = panelArray[i];
 					currPanel.height = effHeight;

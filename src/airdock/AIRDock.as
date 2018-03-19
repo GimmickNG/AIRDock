@@ -148,7 +148,7 @@ package airdock
 			}
 		}
 		
-		private function finishNativeDrag(evt:DockEvent):void 
+		private function finishDragDockEvent(evt:DockEvent):void 
 		{
 			if(evt.isDefaultPrevented()) {
 				return;
@@ -235,7 +235,9 @@ package airdock
 				}
 			}
 			
-			if (window && cl_dragStruct) {
+			if (window && cl_dragStruct)
+			{
+				cl_dragStruct.updateStageCoordinates(evt.stageX, evt.stageY)
 				moveWindowTo(window, cl_dragStruct.localX, cl_dragStruct.localY, cl_dragStruct.convertToScreen())
 			}
 			cl_dragStruct = null;
@@ -250,7 +252,7 @@ package airdock
 		
 		private function moveWindowTo(window:NativeWindow, localX:Number, localY:Number, windowPoint:Point):void 
 		{
-			if(!window) {
+			if(!window || !windowPoint || isNaN(windowPoint.x) || isNaN(windowPoint.y) || isNaN(localX) || isNaN(localY)) {
 				return;
 			}
 			var chromeOffset:Point = window.globalToScreen(new Point(localX * window.stage.stageWidth, localY * window.stage.stageHeight))
@@ -319,10 +321,10 @@ package airdock
 				rootContainer = cl_treeResolver.findRootContainer(container)
 				if ((rootContainer && rootContainer != container) || (containerWindow && containerWindow.visible))
 				{
-					function dockContainerOnCrossViolation(evt:Event):void
+					function dockContainerOnCrossViolation(innerEvt:Event):void
 					{
 						var currentFunction:Function = arguments.callee
-						var currPanel:IPanel = evt.currentTarget as IPanel
+						var currPanel:IPanel = innerEvt.currentTarget as IPanel
 						var rootContainer:IContainer = cl_treeResolver.findRootContainer(cl_treeResolver.findParentContainer(currPanel as DisplayObject))
 						//dock all panels in the parent container if cross-docking is disabled
 						//i.e. so as to prevent them from being integrated into the other Docker's containers
@@ -330,15 +332,20 @@ package airdock
 						{
 							movePanelToContainer(currPanel, parkedContainer, PanelContainerSide.FILL)
 							dockAllPanelsInContainer(null, parkedContainer)
-							if (cl_dragStruct) {
+							if (cl_dragStruct)
+							{
+								cl_dragStruct.updateStageCoordinates(evt.stageX, evt.stageY)
 								moveWindowTo(getContainerWindow(parkedContainer), cl_dragStruct.localX, cl_dragStruct.localY, cl_dragStruct.convertToScreen())
 							}
 						}
 						currPanel.removeEventListener(Event.ADDED, currentFunction)
 					}
 					
-					var panels:Vector.<IPanel> = filterUndockablePanels(container.getPanels(false))
-					if (isMatchingDockPolicy(crossDockingPolicy, CrossDockingPolicy.PREVENT_OUTGOING) && panels && panels.length)
+					var allPanels:Vector.<IPanel> = container.getPanels(false);
+					var dockablePanels:Vector.<IPanel> = allPanels.filter(function(item:IPanel, index:int, arr:Vector.<IPanel>):Boolean {
+						return item.dockable;	//get only dockable panels
+					});
+					if (isMatchingDockPolicy(crossDockingPolicy, CrossDockingPolicy.PREVENT_OUTGOING) && dockablePanels && dockablePanels.length)
 					{
 						//selects the first panel* and docks all the panels in the current container to the parked container's window
 						//when it gets added to stage, if there's a violation in crossDocking policy
@@ -346,18 +353,18 @@ package airdock
 						var i:uint
 						var currPanel:IPanel;
 						var parkedContainer:IContainer
-						for (i = 0; !parkedContainer && i < panels.length; ++i)
+						for (i = 0; !parkedContainer && i < dockablePanels.length; ++i)
 						{
-							currPanel = panels[i] as IPanel;
+							currPanel = dockablePanels[i] as IPanel;
 							if(currPanel && !isForeignPanel(currPanel)) {
 								parkedContainer = getContainerFromWindow(getWindowFromPanel(currPanel, true), true)
 							}
 						}
 						if (parkedContainer)
 						{
-							for (i = 0; i < panels.length; ++i)
+							for (i = 0; i < dockablePanels.length; ++i)
 							{
-								currPanel = panels[i] as IPanel;
+								currPanel = dockablePanels[i] as IPanel;
 								currPanel.removeEventListener(Event.ADDED, dockPanelOnCrossViolation);
 								currPanel.addEventListener(Event.ADDED, dockContainerOnCrossViolation);
 							}
@@ -369,12 +376,23 @@ package airdock
 					}
 					else
 					{
-						var filtered:Vector.<IPanel> = filterUndockablePanels(container.getPanels(false));
-						if (!filtered.length) {
-							rootContainer.removeContainer(container)	//remove containers if all can be docked
+						//undockable panels will be removed from the root container briefly
+						//and then re-added back to the same position they were before
+						//based on the side sequence with respect to the root
+						//prior to their removal
+						var filtered:Vector.<IPanel> = filterUndockablePanels(allPanels)
+						var sideSequences:Vector.<String> = new Vector.<String>(filtered.length, true)
+						for (i = 0; i < filtered.length; ++i) {
+							sideSequences[i] = cl_treeResolver.serializeCode(rootContainer, filtered[i] as DisplayObject)
+						}
+						rootContainer.removeContainer(container)	//remove containers
+						//re-add to same position
+						//note that this approach means they will not be part of the same container
+						for (i = 0; i < filtered.length; ++i) {
+							addPanelToSideSequence(filtered[i], rootContainer, sideSequences[i])
 						}
 						originalWindow = getContainerWindow(rootContainer)
-						newWindow = getContainerWindow(moveExistingPanelsFrom(filtered, rootContainer, getFirstPanel))
+						newWindow = getContainerWindow(moveExistingPanelsFrom(dockablePanels, rootContainer, getFirstPanel))
 						if (originalWindow && originalWindow != newWindow) {
 							originalWindow.visible = false;
 						}
@@ -382,10 +400,8 @@ package airdock
 				}
 			}
 			
-			if (cl_dragStruct)
-			{
-				cl_dragStruct.stageX = evt.stageX
-				cl_dragStruct.stageY = evt.stageY
+			if (cl_dragStruct) {
+				cl_dragStruct.updateStageCoordinates(evt.stageX, evt.stageY)
 			}
 		}
 		
@@ -503,7 +519,7 @@ package airdock
 			container.addEventListener(NativeDragEvent.NATIVE_DRAG_EXIT, hideDockHelperOnEvent, false, 0, true)
 			container.addEventListener(Event.REMOVED, addContainerListenersOnUnlink, false, 0, true)
 			container.addEventListener(Event.ADDED, removeContainerListenersOnLink, false, 0, true)
-			container.addEventListener(DockEvent.DRAG_COMPLETING, finishNativeDrag, false, 0, true)
+			container.addEventListener(DockEvent.DRAG_COMPLETING, finishDragDockEvent, false, 0, true)
 			container.addEventListener(MouseEvent.MOUSE_MOVE, showResizerOnEvent, false, 0, true)
 			container.addEventListener(PanelContainerEvent.PANEL_ADDED, setRoot, false, 0, true)
 		}
@@ -530,6 +546,12 @@ package airdock
 			}
 		}
 		
+		/**
+		 * Removes the listeners for a given container.
+		 * Does not check whether it is a foreign container or not, prior to removal, since there is no effect if it is.
+		 * Calling this function multiple times has no additional effect.
+		 * @param	container
+		 */
 		private function removeContainerListeners(container:IContainer):void
 		{
 			container.removeEventListener(PanelContainerEvent.PANEL_ADDED, setRoot)
@@ -543,7 +565,7 @@ package airdock
 			container.removeEventListener(NativeDragEvent.NATIVE_DRAG_EXIT, hideDockHelperOnEvent)
 			container.removeEventListener(Event.REMOVED, addContainerListenersOnUnlink)
 			container.removeEventListener(Event.ADDED, removeContainerListenersOnLink)
-			container.removeEventListener(DockEvent.DRAG_COMPLETING, finishNativeDrag)
+			container.removeEventListener(DockEvent.DRAG_COMPLETING, finishDragDockEvent)
 			container.removeEventListener(MouseEvent.MOUSE_MOVE, showResizerOnEvent)
 		}
 		
@@ -678,8 +700,8 @@ package airdock
 				{
 					if (PanelContainerSide.isComplementary(side, container.sideCode))
 					{
-						var sidesMatch:Boolean = (side == container.sideCode);
 						var targetContainerEqual:Boolean = (container.getSide(container.sideCode) == targetContainer);
+						var sidesMatch:Boolean = (side == container.sideCode);
 						//i.e. targetContainerEqual xor sidesMatch
 						displayResizer = targetContainerEqual != sidesMatch;
 						break;
@@ -732,7 +754,7 @@ package airdock
 		
 		private function showDockHelperOnEvent(evt:NativeDragEvent):void 
 		{
-			if(!cl_dockHelper) {
+			if(!cl_dockHelper || !(evt.clipboard.hasFormat(cl_dockFormat.panelFormat) || evt.clipboard.hasFormat(cl_dockFormat.containerFormat))) {
 				return;
 			}
 			else if (evt.currentTarget == cl_dockHelper) {
@@ -823,12 +845,11 @@ package airdock
 		 * @param	container		The container to move panels from. This is usually the container of the panel, resolved by the tree resolver.
 		 * @param	panelRetriever	The panel retrieving function. This is a function which takes two parameters, (excluding, container), which returns a panel from the given container. 
 		 * 							The contents of the container passed in the moveExistingPanelsFrom function is then moved into the container of the panel returned by the panelRetriever function.
-		 * @return	The container into which the existing contents (excluding the panel, and by extension its container, passed in the excluding parameter) of the container passed to this function are moved into.
+		 * @return	The container into which the existing contents (excluding the panels, and by extension their containers, passed in the excluding parameter) of the container passed to this function are moved into.
 		 */
 		private function moveExistingPanelsFrom(excluding:Vector.<IPanel>, container:IContainer, panelRetriever:Function):IContainer
 		{
-			var window:NativeWindow = getContainerWindow(container)
-			if(!(window && panelRetriever != null)) {
+			if(panelRetriever == null) {
 				return null;
 			}
 			//suppose main panel of container ie panel's original container is removed from window
