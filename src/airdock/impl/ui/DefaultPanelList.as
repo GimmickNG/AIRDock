@@ -1,11 +1,11 @@
-package airdock.impl.ui 
+package airdock.impl.ui
 {
 	import airdock.enums.PanelContainerSide;
 	import airdock.events.DockEvent;
 	import airdock.events.PanelContainerEvent;
 	import airdock.interfaces.docking.IDockTarget;
-	import airdock.interfaces.ui.IDisplayablePanelList;
 	import airdock.interfaces.docking.IPanel;
+	import airdock.interfaces.ui.IDisplayablePanelList;
 	import flash.desktop.NativeDragManager;
 	import flash.display.DisplayObject;
 	import flash.display.InteractiveObject;
@@ -48,7 +48,7 @@ package airdock.impl.ui
 	 * Provides a tabbed list at the bottom of the container with a bar at the top with the active panel's name.
 	 * 
 	 * The colour of the tabbed bar and the top bar are light blue and dark blue by default, respectively; 
-	 * this can be changed by modifying the static attribute ACTIVATED_COLOR and DEACTIVATED_COLOR (respectively).
+	 * this can be changed by modifying the activated and deactivated colors, respectively, via the setColors() method.
 	 * 
 	 * A panel or the entire container can be docked to its parked container by double clicking either a tab or the tabbed bar, respectively.
 	 * 
@@ -60,19 +60,9 @@ package airdock.impl.ui
 	 */
 	public class DefaultPanelList extends Sprite implements IDisplayablePanelList, IDockTarget
 	{
-		/**
-		 * The color of the tabbed bar, and the color of a tab which is activated. Can be changed.
-		 * @default 0x86B7E8
-		 */
-		public static var ACTIVATED_COLOR:int = 0x86B7E8;
-		
-		/**
-		 * The color of the top bar, and the color of a tab which has been deactivated. Can be changed.
-		 * @default 0x164B9C
-		 */
-		public static var DEACTIVATED_COLOR:int = 0x164B9C;
-		
 		private var u_color:uint;
+		private var u_activatedColor:uint;
+		private var u_deactivatedColor:uint;
 		private var num_maxWidth:Number;
 		private var num_maxHeight:Number;
 		private var tf_panelName:TextField;
@@ -83,18 +73,36 @@ package airdock.impl.ui
 		public function DefaultPanelList() 
 		{
 			super();
+			tf_panelName = new TextField();
+			tf_panelName.selectable = false;
+			tf_panelName.mouseEnabled = false;
 			addEventListener(MouseEvent.CLICK, dispatchShowPanel)
-			addEventListener(MouseEvent.DOUBLE_CLICK, dispatchDock)
-			addEventListener(MouseEvent.MOUSE_DOWN, startDispatchDrag)
-			addEventListener(NativeDragEvent.NATIVE_DRAG_OVER, onDragOver)
-			addEventListener(NativeDragEvent.NATIVE_DRAG_DROP, onDragDrop)
-			rect_visibleRegion = new Rectangle()
-			vec_tabs = new Vector.<PanelTab>()
-			pt_preferredLocation = new Point()
-			vec_panels = new Vector.<IPanel>()
-			tf_panelName = new TextField()
-			doubleClickEnabled = true
+			addEventListener(MouseEvent.DOUBLE_CLICK, dispatchDock);
+			addEventListener(MouseEvent.MOUSE_DOWN, startDispatchDrag);
+			addEventListener(NativeDragEvent.NATIVE_DRAG_OVER, onDragOver);
+			addEventListener(NativeDragEvent.NATIVE_DRAG_DROP, onDragDrop);
+			rect_visibleRegion = new Rectangle();
+			pt_preferredLocation = new Point();
+			vec_panels = new Vector.<IPanel>();
+			vec_tabs = new Vector.<PanelTab>();
+			setColors(0xFF86B7E8, 0xFF164B9C);
+			doubleClickEnabled = true;
+			addChild(tf_panelName)
 			redraw(100, 100)
+		}
+		
+		/**
+		 * Sets the activated and the deactivated colors for the panelList.
+		 * The activated color is that color for each tab when its panel is active, and that of the tab bar as well;
+		 * the deactivated color is the color each tab has when its panel is not active, and that of the top bar as well.
+		 * @param	activatedColor	The activated color as an AARRGGBB value; the default value for this is 0xFF86B7E8.
+		 * @param	deactivatedColor	The deactivated color as an AARRGGBB value; the default value for this is 0xFF164B9C.
+		 */
+		public function setColors(activatedColor:uint = 0xFF86B7E8, deactivatedColor:uint = 0xFF164B9C):void
+		{
+			u_deactivatedColor = deactivatedColor
+			u_activatedColor = activatedColor
+			redraw(width, height)
 		}
 		
 		private function startDispatchDrag(evt:MouseEvent):void 
@@ -132,22 +140,17 @@ package airdock.impl.ui
 			if(!panel) {
 				return;
 			}
-			var tab:PanelTab = createPanelTab()
-			tab.setTabName(panel.panelName)
-			vec_tabs.splice(index, 0, tab)
-			vec_panels.splice(index, 0, panel)
-			showPanel(panel)
-			redraw(width, height)
-		}
-		
-		private function createPanelTab():PanelTab
-		{
 			var tab:PanelTab = new PanelTab()
-			tab.activatedColor = ACTIVATED_COLOR
-			tab.deactivatedColor = DEACTIVATED_COLOR
+			tab.activatedColor = u_activatedColor
+			tab.deactivatedColor = u_deactivatedColor
+			tab.setTabName(panel.panelName)
 			tab.doubleClickEnabled = true
 			tab.activate()
-			return tab
+			vec_tabs.splice(index, 0, tab)
+			vec_panels.splice(index, 0, panel)
+			
+			showPanel(panel)
+			redraw(width, height)
 		}
 		
 		/**
@@ -176,21 +179,10 @@ package airdock.impl.ui
 				return;
 			}
 			var index:int = vec_tabs.indexOf(evt.target as PanelTab)
-			if(!dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SHOW_REQUESTED, vec_panels[index], null, true, true))) {
-				return;
+			var panel:IPanel = vec_panels[index];
+			if(dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SHOW_REQUESTED, panel, null, true, true))) {
+				showPanel(panel)
 			}
-			
-			var tab:PanelTab = vec_tabs[index];
-			for (var i:uint = 0; i < vec_tabs.length; ++i) {
-				vec_tabs[i].deactivate()
-			}
-			tab.activate()
-			
-			var panelName:String = vec_panels[index].panelName
-			if(!panelName) {
-				panelName = "";
-			}
-			tf_panelName.text = panelName
 		}
 		
 		private function dispatchDock(evt:MouseEvent):void
@@ -226,9 +218,12 @@ package airdock.impl.ui
 			}
 			graphics.clear()
 			graphics.lineStyle(1)
-			graphics.beginFill(DEACTIVATED_COLOR, 1)
+			color = u_deactivatedColor;
+			graphics.beginFill(color & 0x00FFFFFF, ((color & 0xFF000000) >>> 24) / 0xFF)
 			graphics.drawRect(0, 0, width - 1, barHeight)
-			graphics.beginFill(ACTIVATED_COLOR, 1)
+			graphics.endFill()
+			color = u_activatedColor;
+			graphics.beginFill(color, ((color & 0xFF000000) >>> 24) / 0xFF)
 			graphics.drawRect(0, height - barHeight, width - 1, barHeight)
 			graphics.endFill()
 			tf_panelName.width = width;
@@ -236,9 +231,10 @@ package airdock.impl.ui
 			for (var i:uint = 0, currX:Number = 0; i < vec_tabs.length; ++i)
 			{
 				var currTab:PanelTab = vec_tabs[i];
-				currTab.activatedColor = ACTIVATED_COLOR
-				currTab.deactivatedColor = DEACTIVATED_COLOR
-				currTab.y = height - (barHeight + 1)
+				currTab.activatedColor = u_activatedColor
+				currTab.deactivatedColor = u_deactivatedColor
+				currTab.redraw(currTab.width, currTab.height)
+				currTab.y = height - (barHeight + 1);
 				currTab.height = barHeight
 				currTab.x = currX;
 				currX += currTab.width
@@ -290,6 +286,12 @@ package airdock.impl.ui
 				vec_tabs[i].deactivate()
 			}
 			tab.activate()
+			
+			var panelName:String = vec_panels[index].panelName
+			if(!panelName) {
+				panelName = "";
+			}
+			tf_panelName.text = panelName
 		}
 		
 		/**
@@ -310,8 +312,8 @@ package airdock.impl.ui
 		{
 			num_maxHeight = value;
 			redraw(width, value)
-			pt_preferredLocation.y = 0
 			rect_visibleRegion.y = 16
+			pt_preferredLocation.y = 0
 			rect_visibleRegion.height = value - 40
 		}
 		
@@ -360,13 +362,16 @@ import flash.text.TextField;
 import flash.text.TextFieldAutoSize;
 internal class PanelTab extends Sprite
 {
-	private var u_color:uint;
+	public static const ACTIVATED:Boolean = true;
+	public static const DEACTIVATED:Boolean = false;
+	
+	private var b_state:Boolean;
+	private var tf_panelName:TextField;
 	private var u_activatedColor:uint;
 	private var u_deactivatedColor:uint;
-	private var tf_panelName:TextField;
 	public function PanelTab()
 	{
-		u_color = u_deactivatedColor
+		b_state = DEACTIVATED;
 		u_activatedColor = 0xFFFFFF
 		tf_panelName = new TextField()
 		tf_panelName.mouseEnabled = false;
@@ -384,23 +389,27 @@ internal class PanelTab extends Sprite
 	}
 	public function redraw(width:Number, height:Number):void
 	{
+		var colorAlpha:Number = ((color & 0xFF000000) >>> 24) / 0xFF;
 		graphics.clear()
-		graphics.beginFill(color, 1)
+		graphics.beginFill(color & 0x00FFFFFF, colorAlpha)
 		graphics.drawRect(0, 0, width, height)
 		graphics.endFill()
 		tf_panelName.x = (width - tf_panelName.width) * 0.5;
 		tf_panelName.y = (height - tf_panelName.height) * 0.5;
 	}
+	
 	public function activate():void
 	{
-		u_color = u_activatedColor
+		b_state = ACTIVATED
 		redraw(width, height)
 	}
+	
 	public function deactivate():void
 	{
-		u_color = u_deactivatedColor
+		b_state = DEACTIVATED
 		redraw(width, height)
 	}
+	
 	override public function set height(value:Number):void {
 		redraw(width, value)
 	}
@@ -409,12 +418,12 @@ internal class PanelTab extends Sprite
 		redraw(value, height)
 	}
 	
-	public function get color():uint {
-		return u_color;
-	}
-	
-	public function set color(value:uint):void {
-		u_color = value;
+	public function get color():uint
+	{
+		if(b_state == ACTIVATED) {
+			return u_activatedColor
+		}
+		return u_deactivatedColor
 	}
 	
 	public function get deactivatedColor():uint {

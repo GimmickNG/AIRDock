@@ -119,18 +119,18 @@ package airdock
 		{
 			var orientation:int = cl_resizer.sideCode
 			var currContainer:IContainer = evt.relatedContainer
-			var pos:Point = currContainer.globalToLocal(cl_resizer.localToGlobal(new Point()))
+			var position:Point = currContainer.globalToLocal(cl_resizer.localToGlobal(new Point()))
 			var maxSize:Number, value:Number;
 			switch(orientation)
 			{
 				case PanelContainerSide.LEFT:
 				case PanelContainerSide.RIGHT:
-					value = pos.x
+					value = position.x
 					maxSize = currContainer.width;
 					break;
 				case PanelContainerSide.TOP:
 				case PanelContainerSide.BOTTOM:
-					value = pos.y;
+					value = position.y;
 					maxSize = currContainer.height;
 					break;
 				case PanelContainerSide.FILL:
@@ -387,7 +387,7 @@ package airdock
 						}
 						rootContainer.removeContainer(container)	//remove containers
 						//re-add to same position
-						//note that this approach means they will not be part of the same container
+						//note: this approach means they will not be part of the same container
 						for (i = 0; i < filtered.length; ++i) {
 							addPanelToSideSequence(filtered[i], rootContainer, sideSequences[i])
 						}
@@ -556,16 +556,16 @@ package airdock
 		{
 			container.removeEventListener(PanelContainerEvent.PANEL_ADDED, setRoot)
 			container.removeEventListener(PanelContainerEvent.DRAG_REQUESTED, startDragOnEvent)
-			container.removeEventListener(PanelContainerEvent.STATE_TOGGLE_REQUESTED, togglePanelStateOnEvent)
 			container.removeEventListener(PanelContainerEvent.REMOVE_REQUESTED, removeContainerIfEmpty)
+			container.removeEventListener(PanelContainerEvent.STATE_TOGGLE_REQUESTED, togglePanelStateOnEvent)
 			container.removeEventListener(PanelContainerEvent.CONTAINER_CREATED, registerContainerOnCreate)
 			container.removeEventListener(PanelContainerEvent.SETUP_REQUESTED, customizeContainerOnSetup)
 			container.removeEventListener(NativeDragEvent.NATIVE_DRAG_DROP, preventDockOnCrossViolation)
 			container.removeEventListener(NativeDragEvent.NATIVE_DRAG_ENTER, showDockHelperOnEvent)
 			container.removeEventListener(NativeDragEvent.NATIVE_DRAG_EXIT, hideDockHelperOnEvent)
+			container.removeEventListener(DockEvent.DRAG_COMPLETING, finishDragDockEvent)
 			container.removeEventListener(Event.REMOVED, addContainerListenersOnUnlink)
 			container.removeEventListener(Event.ADDED, removeContainerListenersOnLink)
-			container.removeEventListener(DockEvent.DRAG_COMPLETING, finishDragDockEvent)
 			container.removeEventListener(MouseEvent.MOUSE_MOVE, showResizerOnEvent)
 		}
 		
@@ -575,8 +575,7 @@ package airdock
 				return;
 			}
 			var container:IContainer = evt.relatedContainer as IContainer
-			
-			//TODO handle this condition - it should check after the panel is removed
+			//TODO check whether this condition works or not
 			var panels:Vector.<IPanel> = container.getPanels(true);
 			if (panels.length > 1 || (panels.length == 1 && panels[0] != evt.relatedPanel)) {
 				return;	//has children, do not remove - either more than the panel being removed, or a different panel from that which is being removed
@@ -782,9 +781,8 @@ package airdock
 			var container:IContainer = evt.relatedContainer;
 			var rootContainer:IContainer = evt.currentTarget as IContainer
 			//don't modify foreign container's containers, since that container's Docker will already have listeners for it
-			if (!(evt.isDefaultPrevented() || isForeignContainer(rootContainer)))
-			{
-				//if it has no sides and it has panels, create a new panelList for it; otherwise, remove it
+			//if it has no sides and it has panels, create a new panelList for it; otherwise, remove it
+			if (!(evt.isDefaultPrevented() || isForeignContainer(rootContainer))) {
 				container.panelList = ((container.hasSides || !container.hasPanels(true)) || cl_panelListFactory.createPanelList()) as IPanelList
 			}
 		}
@@ -1878,6 +1876,12 @@ internal class DragInformation
 		return dragStage.nativeWindow.globalToScreen(new Point(num_stageX, num_stageY))
 	}
 	
+	public function updateStageCoordinates(stageX:Number, stageY:Number):void 
+	{
+		num_stageX = stageX;
+		num_stageY = stageY;
+	}
+	
 	public function get dragStage():Stage {
 		return st_dragStage;
 	}
@@ -1900,16 +1904,8 @@ internal class DragInformation
 		return num_stageX;
 	}
 	
-	public function set stageX(value:Number):void {
-		num_stageX = value;
-	}
-	
 	public function get stageY():Number {
 		return num_stageY;
-	}
-	
-	public function set stageY(value:Number):void {
-		num_stageY = value;
 	}
 }
 
