@@ -251,21 +251,26 @@ package airdock.impl
 		
 		private function sendDockPanelRequest(evt:PanelContainerEvent):void
 		{
-			evt.stopImmediatePropagation()
+			evt.stopImmediatePropagation();
 			if(evt.isDefaultPrevented()) {
 				return;
 			}
 			dispatchEvent(new PanelContainerEvent(evt.type, evt.relatedPanel, this, true, false))
-			
 			//for the listeners registered - DRAG and STATE_TOGGLE the relatedPanel is
 			//the panel which is going to be removed (that is, this event occurs before it is removed)
 			//if there is no relatedPanel then it implies that the entire container is to be removed instead
 			//in which case there is no need to show the last panel in the UIPanelList.
-			if (evt.relatedPanel)
+			var relatedPanel:IPanel = evt.relatedPanel
+			if (relatedPanel)
 			{
 				var panelList:Vector.<IPanel> = getPanels(false);
-				if (panelList.length) {	//shows the other panel in the UIPanelList
-					(evt.currentTarget as IPanelList).showPanel(panelList.shift())
+				while (panelList.length)
+				{
+					//shows the other panel in the UIPanelList
+					var currPanel:IPanel = panelList.shift();
+					if (currPanel && currPanel != relatedPanel) {
+						(evt.currentTarget as IPanelList).showPanel(currPanel)
+					}
 				}
 			}
 		}

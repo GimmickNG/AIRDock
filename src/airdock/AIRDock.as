@@ -371,7 +371,7 @@ package airdock
 						}
 					}
 					
-					if (containerWindow) {
+					if (containerWindow && container == cl_treeResolver.findRootContainer(container)) {
 						containerWindow.visible = false;
 					}
 					else
@@ -593,7 +593,7 @@ package airdock
 			//if it's the root (i.e. findRootContainer(target) == target (or != evt.currentTarget), then it won't remove the listeners
 			var target:IContainer = evt.target as IContainer
 			var root:IContainer = cl_treeResolver.findRootContainer(target)
-			if (target && !isForeignContainer(target) && root != target && root == evt.currentTarget)
+			if (target && !isForeignContainer(target) && root != target)
 			{
 				removeContainerListeners(target)
 				dct_foreignCounter[target] = false;
@@ -1037,6 +1037,7 @@ package airdock
 				}
 			}
 			dispatchEvent(new PanelContainerStateEvent(PanelContainerStateEvent.STATE_TOGGLED, evt.relatedPanel, evt.relatedContainer, prevState, !prevState, false, false))
+			trace(cl_treeResolver.findRootContainer(evt.currentTarget as IContainer).name)
 		}
 		
 		private function addPanelToSideSequence(panel:IPanel, container:IContainer, sideCode:String):IContainer
@@ -1459,22 +1460,37 @@ package airdock
 		 */
 		public function showPanel(panel:IPanel):void
 		{
+			//shows the panel and dispatches a change event
+			//returns if everything is the same
 			if(!panel) {
 				return;
 			}
 			var container:IContainer = cl_treeResolver.findParentContainer(panel as DisplayObject)
+			var dockToPreviousRoot:Boolean;
 			if (container)
 			{
 				if (isForeignContainer(container)) {
 					return;
 				}
-				else if(getAuthoritativeContainerState(container) == PanelContainerState.DOCKED) {
-					getContainerWindow(container).activate()
+				else if (getAuthoritativeContainerState(container) == PanelContainerState.DOCKED)
+				{
+					var window:NativeWindow = getContainerWindow(container);
+					if(window.visible) {
+						return;
+					}
+					window.activate()
+				}
+				else {
+					dockToPreviousRoot = true;
 				}
 			}
-			else
+			
+			if(dockToPreviousRoot || !container)
 			{
 				var sideInfo:PanelStateInformation = getInternalPanelStateInfo(panel)
+				if(sideInfo.previousRoot == cl_treeResolver.findRootContainer(container)) {
+					return;
+				}
 				addPanelToSideSequence(panel, sideInfo.previousRoot, sideInfo.integratedCode)
 			}
 			dispatchEvent(new PanelContainerStateEvent(PanelContainerStateEvent.VISIBILITY_TOGGLED, panel, cl_treeResolver.findParentContainer(panel as DisplayObject), false, true, false, false))
