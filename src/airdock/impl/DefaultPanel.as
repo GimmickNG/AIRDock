@@ -13,8 +13,22 @@ package airdock.impl
 	import flash.geom.Point;
 	
 	/**
-	 * ...
-	 * @author Gimmick
+	 * Dispatched when any of the listed panel's attributes have been changed:
+	 * * color
+	 * * dockable
+	 * * resizable
+	 * * width
+	 * * height
+	 * * panelName
+	 * @eventType	airdock.events.PanelPropertyChangeEvent.PROPERTY_CHANGED
+	 */
+	[Event(name="ppcPropertyChange", type="airdock.events.PanelPropertyChangeEvent")]
+	
+	/**
+	 * Default IPanel implementation. Is a container with a background color which can be changed on demand.
+	 * 
+	 * @author	Gimmick
+	 * @see	airdock.interfaces.docking.IPanel
 	 */
 	public class DefaultPanel extends Sprite implements IPanel
 	{
@@ -30,7 +44,11 @@ package airdock.impl
 		{
 			var prevWidth:Number = this.width
 			var prevHeight:Number = this.height
-			if (u_color != color)
+			if((prevWidth != width && !dispatchEvent(new PanelPropertyChangeEvent(PanelPropertyChangeEvent.PROPERTY_CHANGING, "width", prevWidth, width, true, true))) || (prevHeight != height && !dispatchEvent(new PanelPropertyChangeEvent(PanelPropertyChangeEvent.PROPERTY_CHANGING, "height", prevHeight, height, true, true)))) {
+				return;
+			}
+			
+			if (u_color != color && dispatchEvent(new PanelPropertyChangeEvent(PanelPropertyChangeEvent.PROPERTY_CHANGING, "backgroundColor", prevColor, color, true, true)))
 			{
 				var prevColor:uint = u_color;
 				u_color = color;
@@ -49,10 +67,16 @@ package airdock.impl
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function getDefaultHeight():Number {
 			return 256;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function getDefaultWidth():Number {
 			return 256;
 		}
@@ -68,37 +92,55 @@ package airdock.impl
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function get panelName():String {
 			return str_panelName;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function set panelName(value:String):void
 		{
-			if (str_panelName != value)
+			var prevValue:String = str_panelName
+			if (str_panelName != value && dispatchEvent(new PanelPropertyChangeEvent(PanelPropertyChangeEvent.PROPERTY_CHANGING, "panelName", prevValue, value, true, true)))
 			{
-				var prevValue:String = str_panelName
 				str_panelName = value;
 				dispatchEvent(new PanelPropertyChangeEvent(PanelPropertyChangeEvent.PROPERTY_CHANGED, "panelName", prevValue, value, true, false))
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function get resizable():Boolean {
 			return b_resizable;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function set resizable(value:Boolean):void
 		{
-			if (b_resizable != value)
+			if (b_resizable != value && dispatchEvent(new PanelPropertyChangeEvent(PanelPropertyChangeEvent.PROPERTY_CHANGING, "resizable", !value, value, true, true)))
 			{
 				b_resizable = value;
 				dispatchEvent(new PanelPropertyChangeEvent(PanelPropertyChangeEvent.PROPERTY_CHANGED, "resizable", !value, value, true, false))
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function get dockable():Boolean {
 			return b_dockable;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function set dockable(value:Boolean):void
 		{
 			if (b_dockable != value) 
@@ -108,10 +150,16 @@ package airdock.impl
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		override public function get width():Number {
 			return super.width;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		override public function set width(value:Number):void 
 		{
 			if (width != value) {
@@ -119,10 +167,16 @@ package airdock.impl
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		override public function get height():Number {
 			return super.height;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		override public function set height(value:Number):void 
 		{
 			if (height != value) {

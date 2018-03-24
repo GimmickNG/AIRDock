@@ -8,6 +8,7 @@ package airdock
 	import airdock.enums.PanelContainerState;
 	import airdock.events.DockEvent;
 	import airdock.events.PanelContainerEvent;
+	import airdock.events.PanelContainerStateEvent;
 	import airdock.events.PanelPropertyChangeEvent;
 	import airdock.interfaces.docking.IContainer;
 	import airdock.interfaces.docking.ICustomizableDocker;
@@ -21,6 +22,9 @@ package airdock
 	import airdock.interfaces.ui.IDockHelper;
 	import airdock.interfaces.ui.IPanelList;
 	import airdock.interfaces.ui.IResizer;
+	import airdock.util.IPair;
+	import airdock.util.LazyPair;
+	import airdock.util.StaticPair;
 	import flash.desktop.Clipboard;
 	import flash.desktop.ClipboardTransferMode;
 	import flash.desktop.NativeDragActions;
@@ -36,7 +40,9 @@ package airdock
 	import flash.display.StageScaleMode;
 	import flash.errors.IllegalOperationError;
 	import flash.events.Event;
+	import flash.events.EventDispatcher;
 	import flash.events.EventPhase;
+	import flash.events.IEventDispatcher;
 	import flash.events.MouseEvent;
 	import flash.events.NativeDragEvent;
 	import flash.events.NativeWindowBoundsEvent;
@@ -45,8 +51,22 @@ package airdock
 	import flash.utils.Dictionary;
 	
 	/**
-	 * ...
+	 * Dispatched whenever a panel is either added to a container, or when it is removed from its container.
+	 * @eventType airdock.events.PanelContainerStateEvent.VISIBILITY_TOGGLED
+	 */
+	[Event(name = "pcPanelVisibilityToggled", type = "airdock.events.PanelContainerStateEvent")]
+	
+	/**
+	 * Dispatched whenever a panel is moved to its parked container (docked), or when it is moved into another container which is not its own parked container (integrated).
+	 */
+	[Event(name = "pcPanelStateToggled", type = "airdock.events.PanelContainerStateEvent")]
+	
+	/**
+	 * Implementation of ICustomizableDocker (and by extension, IBasicDocker) which manages the main docking panels mechanism.
+	 * 
 	 * @author Gimmick
+	 * @see	airdock.interfaces.docking.IBasicDocker
+	 * @see	airdock.interfaces.docking.ICustomizableDocker
 	 */
 	public final class AIRDock implements ICustomizableDocker
 	{
@@ -55,10 +75,12 @@ package airdock
 			ALLOWED_DRAG_ACTIONS.allowLink = ALLOWED_DRAG_ACTIONS.allowCopy = false;
 		};
 		
-		private var cl_defaultWindowOptions:NativeWindowInitOptions
-		private var dsp_mainContainer:DisplayObjectContainer
-		private var cl_dragStruct:DragInformation
-		private var dct_containers:Dictionary
+		private var cl_defaultWindowOptions:NativeWindowInitOptions;
+		private var dsp_mainContainer:DisplayObjectContainer;
+		private var cl_dispatcher:IEventDispatcher;
+		private var cl_dragStruct:DragInformation;
+		private var dct_containers:Dictionary;
+		private var i_crossDockingPolicy:int;
 		private var dct_windows:Dictionary;
 		private var num_thumbHeight:Number;
 		private var num_thumbWidth:Number;
@@ -67,13 +89,12 @@ package airdock
 		private var cl_dockFormat:IDockFormat;
 		private var plc_dropTarget:IContainer;
 		private var dct_panelStateInfo:Dictionary;
+		private var dct_foreignCounter:Dictionary;
 		private var cl_treeResolver:ITreeResolver;
 		private var cl_panelFactory:IPanelFactory;
 		private var cl_panelListFactory:IPanelListFactory;
 		private var cl_containerFactory:IContainerFactory;
 		private var cl_defaultContainerOptions:ContainerConfig;
-		private var dct_containerCounter:Dictionary;
-		private var i_crossDockingPolicy:int;
 		public function AIRDock() {
 			init()
 		}
@@ -82,6 +103,7 @@ package airdock
 		{
 			createDictionaries()
 			dragImageWidth = dragImageHeight = 1;
+			cl_dispatcher = new EventDispatcher(this)
 			crossDockingPolicy = CrossDockingPolicy.UNRESTRICTED
 		}
 		
@@ -90,38 +112,47 @@ package airdock
 			dct_windows = new Dictionary()
 			dct_containers = new Dictionary()
 			dct_panelStateInfo = new Dictionary(true)
-			dct_containerCounter = new Dictionary(true)
+			dct_foreignCounter = new Dictionary(true)
 		}
 		
 		private function resizeNestedContainerOnEvent(evt:PanelContainerEvent):void 
 		{
-			var orientation:int = cl_resizer.getSideCode()
+			var orientation:int = cl_resizer.sideCode
 			var currContainer:IContainer = evt.relatedContainer
-			var pos:Point = currContainer.globalToLocal(cl_resizer.localToGlobal(new Point()))
+			var position:Point = currContainer.globalToLocal(cl_resizer.localToGlobal(new Point()))
 			var maxSize:Number, value:Number;
 			switch(orientation)
 			{
 				case PanelContainerSide.LEFT:
 				case PanelContainerSide.RIGHT:
-					value = pos.x
+					value = position.x
 					maxSize = currContainer.width;
 					break;
 				case PanelContainerSide.TOP:
 				case PanelContainerSide.BOTTOM:
-					value = pos.y;
+					value = position.y;
 					maxSize = currContainer.height;
 					break;
 				case PanelContainerSide.FILL:
 				default:
 					return;
 			}
+			if(currContainer.maxSideSize < 1) {
+				maxSize *= currContainer.maxSideSize
+			}
+			else if(maxSize > currContainer.maxSideSize) {
+				maxSize = currContainer.maxSideSize
+			}
 			if (0 < value && value < maxSize) {
-				currContainer.sideRatio = value / maxSize
+				currContainer.sideSize = value
 			}
 		}
 		
-		private function finishNativeDrag(evt:DockEvent):void 
+		private function finishDragDockEvent(evt:DockEvent):void 
 		{
+			if(evt.isDefaultPrevented()) {
+				return;
+			}
 			var clipBoard:Clipboard = evt.clipboard
 			var dragDropTarget:DisplayObject = evt.dragTarget
 			var panel:IPanel = clipBoard.getData(cl_dockFormat.panelFormat, ClipboardTransferMode.ORIGINAL_ONLY) as IPanel
@@ -134,30 +165,42 @@ package airdock
 				dispContainer = dispContainer.parent
 			}
 			dockTarget = dispContainer as IDockTarget
-			if(container && isForeignContainer(container) && isMatchingDockPolicy(crossDockingPolicy, CrossDockingPolicy.REJECT_INCOMING)) {
-				return trace('foreign container', crossDockingPolicy, container.name);
+			if (container && isMatchingDockPolicy(crossDockingPolicy, CrossDockingPolicy.REJECT_INCOMING) && isForeignContainer(container)) {
+				return;	//ignore if it violates policy - this runs before the DRAG_DROP is cancelled, so prevent normal behavior by exiting early
 			}
-			if (relatedContainer && dockTarget)
+			else if (relatedContainer && dockTarget)
 			{
 				var side:int = dockTarget.getSideFrom(dragDropTarget as DisplayObject)
 				if (panel) {
-					integratePanel(panel, relatedContainer, side)
+					movePanelToContainer(panel, relatedContainer, side)
 				}
-				else if (container)
+				else if (container && container != relatedContainer)
 				{
-					var panels:Array = container.panels;
-					for (var i:uint = 0; i < panels.length; ++i)
-					{
-						relatedContainer = integratePanel(panels[i] as IPanel, relatedContainer, side)
-						side = PanelContainerSide.FILL //as after first, the container is made - replace with reserved container by FILL
-					}
+					var panels:Vector.<IPanel> = container.getPanels(false)
+					var undockablePanels:Vector.<IPanel> = filterUndockablePanels(panels);
+					panels = panels.filter(function(item:IPanel, index:int, arr:Vector.<IPanel>):Boolean {
+						return undockablePanels.indexOf(item) == -1;	//exclude non-dockable panels from docking
+					});
+					movePanelsIntoContainer(panels, relatedContainer, side)
 				}
 			}
-			plc_dropTarget = null;
 			cl_dragStruct = null;
+			plc_dropTarget = null;
 		}
 		
-		private function dockContainerIfInvalid(evt:NativeDragEvent):void 
+		private function movePanelsIntoContainer(panels:Vector.<IPanel>, container:IContainer, initialSide:int):IContainer
+		{
+			var side:int = initialSide;
+			var tempCont:IContainer = container;
+			for (var i:uint = 0; i < panels.length; ++i)
+			{
+				tempCont = movePanelToContainer(panels[i], tempCont, side)
+				side = PanelContainerSide.FILL //as after first, the container is made - replace with reserved container by FILL
+			}
+			return tempCont
+		}
+		
+		private function dockContainerIfInvalidDropTarget(evt:NativeDragEvent):void 
 		{
 			if(cl_dockHelper && cl_dockHelper.parent) {
 				cl_dockHelper.parent.removeChild(cl_dockHelper as DisplayObject)
@@ -169,38 +212,76 @@ package airdock
 			var panel:IPanel = clipBoard.getData(cl_dockFormat.panelFormat, ClipboardTransferMode.ORIGINAL_ONLY) as IPanel
 			var container:IContainer = clipBoard.getData(cl_dockFormat.containerFormat, ClipboardTransferMode.ORIGINAL_ONLY) as IContainer
 			if (evt.dropAction != NativeDragActions.NONE || (isForeignContainer(container) && isMatchingDockPolicy(crossDockingPolicy, CrossDockingPolicy.REJECT_INCOMING))) {
-				return;
+				return;	//return if this is the foreign Docker, i.e. let the originating Docker handle it
 			}
-			
 			var window:NativeWindow;
 			if (panel)
 			{
 				window = getWindowFromPanel(panel, true)
 				dockPanel(panel)
+				showPanel(panel)
 			}
 			else if (container)
 			{
-				window = getWindowFromContainer(container)
+				window = getContainerWindow(container)
 				if (window) {
 					window.visible = true
 				}
 				else
 				{
-					var panels:Array = container.panels;
-					if (panels.length) {
-						window = getWindowFromPanel(panels[0] as IPanel, true)
-					}
-					dockAllPanelsInContainer(container)	//grab first panel in container's window and move to that
+					var filtered:Vector.<IPanel> = filterUndockablePanels(container.getPanels(false))
+					window = getWindowFromPanel(getFirstPanel(filtered, container), true)
+					dockAllPanelsInContainer(filtered, container)	//grab first panel in container's window and move to that
 				}
 			}
 			
 			if (window && cl_dragStruct)
 			{
-				var winPoint:Point = cl_dragStruct.dragStage.nativeWindow.globalToScreen(new Point(evt.stageX, evt.stageY))
-				var chromeOffset:Point = window.globalToScreen(new Point(cl_dragStruct.localX * window.stage.stageWidth, cl_dragStruct.localY * window.stage.stageHeight))
-				window.x += winPoint.x - chromeOffset.x;
-				window.y += winPoint.y - chromeOffset.y;
-				cl_dragStruct = null;
+				cl_dragStruct.updateStageCoordinates(evt.stageX, evt.stageY)
+				moveWindowTo(window, cl_dragStruct.localX, cl_dragStruct.localY, cl_dragStruct.convertToScreen())
+			}
+			cl_dragStruct = null;
+		}
+		
+		private function filterUndockablePanels(panels:Vector.<IPanel>):Vector.<IPanel>
+		{
+			return panels.filter(function isDockable(item:IPanel, index:int, arr:Vector.<IPanel>):Boolean {
+				return !item.dockable;	//exclude non-dockable panels from docking
+			});
+		}
+		
+		private function moveWindowTo(window:NativeWindow, localX:Number, localY:Number, windowPoint:Point):void 
+		{
+			if(!window || !windowPoint || isNaN(windowPoint.x) || isNaN(windowPoint.y) || isNaN(localX) || isNaN(localY)) {
+				return;
+			}
+			var chromeOffset:Point = window.globalToScreen(new Point(localX * window.stage.stageWidth, localY * window.stage.stageHeight))
+			window.x += windowPoint.x - chromeOffset.x;
+			window.y += windowPoint.y - chromeOffset.y;
+		}
+		
+		private function preventDockIfInvalid(evt:NativeDragEvent):void
+		{
+			var clipBoard:Clipboard = evt.clipboard
+			if(!(clipBoard.hasFormat(cl_dockFormat.panelFormat) || clipBoard.hasFormat(cl_dockFormat.containerFormat))) {
+				return;
+			}
+			var panel:IPanel = clipBoard.getData(cl_dockFormat.panelFormat, ClipboardTransferMode.ORIGINAL_ONLY) as IPanel
+			var container:IContainer = clipBoard.getData(cl_dockFormat.containerFormat, ClipboardTransferMode.ORIGINAL_ONLY) as IContainer
+			
+			if (panel)
+			{
+				if(!panel.dockable) {
+					evt.preventDefault()	//prevent docking if panel is not dockable
+				}
+			}
+			else if (container)
+			{
+				var panels:Vector.<IPanel> = container.getPanels(false)
+				var excludedPanels:Vector.<IPanel> = filterUndockablePanels(panels)
+				if(panels.length == excludedPanels.length) {
+					evt.preventDefault();	//prevent docking if no panels in container are dockable
+				}
 			}
 		}
 		
@@ -214,7 +295,7 @@ package airdock
 			var panel:IPanel = clipBoard.getData(cl_dockFormat.panelFormat, ClipboardTransferMode.ORIGINAL_ONLY) as IPanel
 			var rootContainer:IContainer, container:IContainer = clipBoard.getData(cl_dockFormat.containerFormat, ClipboardTransferMode.ORIGINAL_ONLY) as IContainer
 			if(isForeignContainer(container) && isMatchingDockPolicy(crossDockingPolicy, CrossDockingPolicy.REJECT_INCOMING)) {
-				return;
+				return;	//do nothing since panel doesn't belong to this Docker
 			}
 			else if (panel)
 			{
@@ -224,7 +305,7 @@ package airdock
 					originalWindow = getWindowFromPanel(panel, false)		//false since we're comparing -- a panel which has never had a window created
 					if (getContainerFromWindow(originalWindow, false) == rootContainer)	//cannot be the container/stage of the panel
 					{
-						moveExistingPanelsFrom(panel, rootContainer, getFirstPanel);
+						moveExistingPanelsFrom(new <IPanel>[panel], rootContainer, getFirstPanel);
 						originalWindow.visible = false
 					}
 				}
@@ -236,93 +317,92 @@ package airdock
 			}
 			else if (container)
 			{
-				var containerWindow:NativeWindow = getWindowFromContainer(container)
+				var containerWindow:NativeWindow = getContainerWindow(container)
 				rootContainer = cl_treeResolver.findRootContainer(container)
 				if ((rootContainer && rootContainer != container) || (containerWindow && containerWindow.visible))
 				{
-					function dockContainerOnCrossViolation(evt:Event):void
+					function dockContainerOnCrossViolation(innerEvt:Event):void
 					{
 						var currentFunction:Function = arguments.callee
-						var currPanel:IPanel = evt.currentTarget as IPanel
+						var currPanel:IPanel = innerEvt.currentTarget as IPanel
 						var rootContainer:IContainer = cl_treeResolver.findRootContainer(cl_treeResolver.findParentContainer(currPanel as DisplayObject))
 						//dock all panels in the parent container if cross-docking is disabled
 						//i.e. so as to prevent them from being integrated into the other Docker's containers
-						if (!crossDockingPolicy && rootContainer && isForeignContainer(rootContainer))
+						if (rootContainer && isForeignContainer(rootContainer))
 						{
-							integratePanel(currPanel, parkedContainer, PanelContainerSide.FILL)
-							dockAllPanelsInContainer(parkedContainer)
+							movePanelToContainer(currPanel, parkedContainer, PanelContainerSide.FILL)
+							dockAllPanelsInContainer(null, parkedContainer)
+							if (cl_dragStruct)
+							{
+								cl_dragStruct.updateStageCoordinates(evt.stageX, evt.stageY)
+								moveWindowTo(getContainerWindow(parkedContainer), cl_dragStruct.localX, cl_dragStruct.localY, cl_dragStruct.convertToScreen())
+							}
 						}
 						currPanel.removeEventListener(Event.ADDED, currentFunction)
 					}
 					
-					var panels:Array = container.panels
-					if (isMatchingDockPolicy(crossDockingPolicy, CrossDockingPolicy.PREVENT_OUTGOING) && panels && panels.length)
+					var allPanels:Vector.<IPanel> = container.getPanels(false);
+					var dockablePanels:Vector.<IPanel> = allPanels.filter(function(item:IPanel, index:int, arr:Vector.<IPanel>):Boolean {
+						return item.dockable;	//get only dockable panels
+					});
+					if (isMatchingDockPolicy(crossDockingPolicy, CrossDockingPolicy.PREVENT_OUTGOING) && dockablePanels && dockablePanels.length)
 					{
 						//selects the first panel* and docks all the panels in the current container to the parked container's window
 						//when it gets added to stage, if there's a violation in crossDocking policy
 						//*note - it can be any panel from the list of panels, since they are all being docked to the same container
-						var parkedContainer:IContainer = getContainerFromWindow(getWindowFromPanel(panels[0] as IPanel, true), true)
-						for (var i:uint = 0; i < panels.length; ++i)
+						var i:uint
+						var currPanel:IPanel;
+						var parkedContainer:IContainer
+						for (i = 0; !parkedContainer && i < dockablePanels.length; ++i)
 						{
-							var currPanel:IPanel = panels[i] as IPanel;
-							currPanel.removeEventListener(Event.ADDED, dockPanelOnCrossViolation)
-							currPanel.addEventListener(Event.ADDED, dockContainerOnCrossViolation);
+							currPanel = dockablePanels[i] as IPanel;
+							if(currPanel && !isForeignPanel(currPanel)) {
+								parkedContainer = getContainerFromWindow(getWindowFromPanel(currPanel, true), true)
+							}
+						}
+						if (parkedContainer)
+						{
+							for (i = 0; i < dockablePanels.length; ++i)
+							{
+								currPanel = dockablePanels[i] as IPanel;
+								currPanel.removeEventListener(Event.ADDED, dockPanelOnCrossViolation);
+								currPanel.addEventListener(Event.ADDED, dockContainerOnCrossViolation);
+							}
 						}
 					}
 					
-					if (containerWindow) {
+					if (containerWindow && container == cl_treeResolver.findRootContainer(container)) {
 						containerWindow.visible = false;
 					}
 					else
 					{
-						rootContainer.removeContainer(container)
-						originalWindow = getWindowFromContainer(rootContainer)
-						newWindow = getWindowFromContainer(moveExistingPanelsFrom(null, rootContainer, getFirstPanel))
+						//undockable panels will be removed from the root container briefly
+						//and then re-added back to the same position they were before
+						//based on the side sequence with respect to the root
+						//prior to their removal
+						var filtered:Vector.<IPanel> = filterUndockablePanels(allPanels)
+						var sideSequences:Vector.<String> = new Vector.<String>(filtered.length, true)
+						for (i = 0; i < filtered.length; ++i) {
+							sideSequences[i] = cl_treeResolver.serializeCode(rootContainer, filtered[i] as DisplayObject)
+						}
+						rootContainer.removeContainer(container)	//remove containers
+						//re-add to same position
+						//note: this approach means they will not be part of the same container
+						for (i = 0; i < filtered.length; ++i) {
+							addPanelToSideSequence(filtered[i], rootContainer, sideSequences[i])
+						}
+						originalWindow = getContainerWindow(rootContainer)
+						newWindow = getContainerWindow(moveExistingPanelsFrom(dockablePanels, rootContainer, getFirstPanel))
 						if (originalWindow && originalWindow != newWindow) {
 							originalWindow.visible = false;
 						}
 					}
 				}
 			}
-		}
-		
-		public function setupPanel(panel:IPanel):void {
-			addPanelListeners(panel)
-		}
-		
-		public function unhookPanel(panel:IPanel):void
-		{
-			if(!panel) {
-				return;
-			}
-			delete dct_panelStateInfo[panel];
-			removePanelListeners(panel)
-		}
-		
-		public function createPanel(options:PanelConfig):IPanel
-		{
-			var panel:IPanel = cl_panelFactory.createPanel(options)
-			setupPanel(panel)
-			return panel
-		}
-		
-		public function createWindow(panel:IPanel):NativeWindow
-		{
-			if(!panel) {
-				return null
-			}
 			
-			var options:NativeWindowInitOptions = defaultWindowOptions
-			options.resizable = panel.resizable
-			
-			var window:NativeWindow = new NativeWindow(options)
-			var stage:Stage = window.stage
-			addWindowListeners(window)
-			dct_windows[panel] = window
-			window.title = panel.panelName
-			stage.align = StageAlign.TOP_LEFT
-			stage.scaleMode = StageScaleMode.NO_SCALE
-			return window
+			if (cl_dragStruct) {
+				cl_dragStruct.updateStageCoordinates(evt.stageX, evt.stageY)
+			}
 		}
 		
 		/**
@@ -337,7 +417,7 @@ package airdock
 			{
 				var container:IContainer 
 				var stage:Stage = window.stage
-				var panel:IPanel = getPanelFromWindow(window)
+				var panel:IPanel = getWindowPanel(window)
 				var defWidth:Number = panel.getDefaultWidth(), defHeight:Number = panel.getDefaultHeight()
 				cl_defaultContainerOptions.width = defWidth;
 				cl_defaultContainerOptions.height = defHeight;
@@ -351,7 +431,56 @@ package airdock
 			return dct_containers[window]
 		}
 		
-		private function getPanelFromWindow(window:NativeWindow):IPanel
+		/**
+		 * Performs a lazy initialization of the window of the given panel if it should be created, or a simple lookup otherwise.
+		 * @param	panel	The panel whose window should be retrieved.
+		 * @param	createIfNotExist	Creates the window if this parameter is true and the window does not yet exist; if this parameter is false, it performs a simple lookup which may fail (i.e. return undefined)
+		 * @return
+		 */
+		private function getWindowFromPanel(panel:IPanel, createIfNotExist:Boolean = true):NativeWindow
+		{
+			if(!panel) {
+				return null;
+			}
+			else if(!dct_windows[panel] && createIfNotExist) {
+				dct_windows[panel] = createWindow(panel)
+			}
+			return dct_windows[panel] as NativeWindow
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function getPanelWindow(panel:IPanel):NativeWindow {
+			return getWindowFromPanel(panel, !isForeignPanel(panel))
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function getContainerWindow(container:IContainer):NativeWindow
+		{
+			var tempContainer:IContainer = cl_treeResolver.findRootContainer(container)
+			for (var window:Object in dct_containers)
+			{
+				if (dct_containers[window] == tempContainer) {
+					return window as NativeWindow;
+				}
+			}
+			return null;
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function getWindowContainer(window:NativeWindow):IContainer {
+			return getContainerFromWindow(window, false)
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function getWindowPanel(window:NativeWindow):IPanel
 		{
 			for (var panel:Object in dct_windows)
 			{
@@ -362,25 +491,11 @@ package airdock
 			return null;
 		}
 		
-		private function getWindowFromContainer(container:IContainer):NativeWindow
-		{
-			for (var window:Object in dct_containers)
-			{
-				if (dct_containers[window] == container) {
-					return window as NativeWindow;
-				}
-			}
-			return null;
-		}
-		
 		/**
-		 * Performs a lazy initialization of the window of the given panel if it should be created, or a simple lookup otherwise.
-		 * @param	panel	The panel whose window should be retrieved.
-		 * @param	createIfNotExist	Creates the window if this parameter is true and the window does not yet exist; if this parameter is false, it performs a simple lookup which may fail (i.e. return undefined)
-		 * @return
+		 * @inheritDoc
 		 */
-		private function getWindowFromPanel(panel:IPanel, createIfNotExist:Boolean = true):NativeWindow {
-			return dct_windows[panel] ||= createIfNotExist ? createWindow(panel) : null;
+		public function getPanelStateInfo(panel:IPanel):IReadablePanelStateInformation {
+			return getInternalPanelStateInfo(panel) as IReadablePanelStateInformation
 		}
 		
 		/**
@@ -388,33 +503,36 @@ package airdock
 		 * @param	panel
 		 * @return
 		 */
-		private function getPanelStateInfo(panel:IPanel):PanelStateInformation {
+		private function getInternalPanelStateInfo(panel:IPanel):PanelStateInformation {
 			return dct_panelStateInfo[panel] ||= new PanelStateInformation()
-		}
-		
-		public function createContainer(options:ContainerConfig):IContainer
-		{
-			var container:IContainer = cl_containerFactory.createContainer(options)
-			container.panelList = cl_panelListFactory.createPanelList()
-			dct_containerCounter[container] = true
-			addContainerListeners(container)
-			return container
 		}
 		
 		private function addContainerListeners(container:IContainer):void
 		{
 			container.addEventListener(PanelContainerEvent.DRAG_REQUESTED, startDragOnEvent, false, 0, true)
-			container.addEventListener(PanelContainerEvent.STATE_TOGGLED, togglePanelStateOnEvent, false, 0, true)
+			container.addEventListener(PanelContainerEvent.STATE_TOGGLE_REQUESTED, togglePanelStateOnEvent, false, 0, true)
 			container.addEventListener(PanelContainerEvent.REMOVE_REQUESTED, removeContainerIfEmpty, false, 0, true)
 			container.addEventListener(PanelContainerEvent.CONTAINER_CREATED, registerContainerOnCreate, false, 0, true)
 			container.addEventListener(PanelContainerEvent.SETUP_REQUESTED, customizeContainerOnSetup, false, 0, true)
+			container.addEventListener(NativeDragEvent.NATIVE_DRAG_DROP, preventDockOnCrossViolation, false, 0, true)
 			container.addEventListener(NativeDragEvent.NATIVE_DRAG_ENTER, showDockHelperOnEvent, false, 0, true)
 			container.addEventListener(NativeDragEvent.NATIVE_DRAG_EXIT, hideDockHelperOnEvent, false, 0, true)
 			container.addEventListener(Event.REMOVED, addContainerListenersOnUnlink, false, 0, true)
 			container.addEventListener(Event.ADDED, removeContainerListenersOnLink, false, 0, true)
-			container.addEventListener(DockEvent.DRAG_COMPLETED, finishNativeDrag, false, 0, true)
+			container.addEventListener(DockEvent.DRAG_COMPLETING, finishDragDockEvent, false, 0, true)
 			container.addEventListener(MouseEvent.MOUSE_MOVE, showResizerOnEvent, false, 0, true)
 			container.addEventListener(PanelContainerEvent.PANEL_ADDED, setRoot, false, 0, true)
+		}
+		
+		private function preventDockOnCrossViolation(evt:NativeDragEvent):void 
+		{
+			if (isMatchingDockPolicy(crossDockingPolicy, CrossDockingPolicy.REJECT_INCOMING) && isForeignContainer(evt.clipboard.getData(cl_dockFormat.containerFormat, ClipboardTransferMode.ORIGINAL_ONLY) as IContainer))
+			{
+				//reject it if it's not allowed in policy
+				evt.preventDefault()
+				evt.stopImmediatePropagation()
+				evt.dropAction = NativeDragActions.NONE
+			}
 		}
 		
 		/**
@@ -424,39 +542,49 @@ package airdock
 		{
 			var rootContainer:IContainer = cl_treeResolver.findRootContainer(evt.currentTarget as IContainer)
 			if (!isForeignContainer(rootContainer)) {
-				dct_containerCounter[evt.relatedContainer] = false;
+				dct_foreignCounter[evt.relatedContainer] = false;
 			}
 		}
 		
+		/**
+		 * Removes the listeners for a given container.
+		 * Does not check whether it is a foreign container or not, prior to removal, since there is no effect if it is.
+		 * Calling this function multiple times has no additional effect.
+		 * @param	container
+		 */
 		private function removeContainerListeners(container:IContainer):void
 		{
 			container.removeEventListener(PanelContainerEvent.PANEL_ADDED, setRoot)
 			container.removeEventListener(PanelContainerEvent.DRAG_REQUESTED, startDragOnEvent)
-			container.removeEventListener(PanelContainerEvent.STATE_TOGGLED, togglePanelStateOnEvent)
 			container.removeEventListener(PanelContainerEvent.REMOVE_REQUESTED, removeContainerIfEmpty)
+			container.removeEventListener(PanelContainerEvent.STATE_TOGGLE_REQUESTED, togglePanelStateOnEvent)
 			container.removeEventListener(PanelContainerEvent.CONTAINER_CREATED, registerContainerOnCreate)
 			container.removeEventListener(PanelContainerEvent.SETUP_REQUESTED, customizeContainerOnSetup)
+			container.removeEventListener(NativeDragEvent.NATIVE_DRAG_DROP, preventDockOnCrossViolation)
 			container.removeEventListener(NativeDragEvent.NATIVE_DRAG_ENTER, showDockHelperOnEvent)
 			container.removeEventListener(NativeDragEvent.NATIVE_DRAG_EXIT, hideDockHelperOnEvent)
+			container.removeEventListener(DockEvent.DRAG_COMPLETING, finishDragDockEvent)
 			container.removeEventListener(Event.REMOVED, addContainerListenersOnUnlink)
 			container.removeEventListener(Event.ADDED, removeContainerListenersOnLink)
-			container.removeEventListener(DockEvent.DRAG_COMPLETED, finishNativeDrag)
 			container.removeEventListener(MouseEvent.MOUSE_MOVE, showResizerOnEvent)
 		}
 		
 		private function removeContainerIfEmpty(evt:PanelContainerEvent):void
 		{
+			if(evt.isDefaultPrevented()) {
+				return;
+			}
 			var container:IContainer = evt.relatedContainer as IContainer
-			
-			//TODO handle this condition - it should check after the panel is removed
-			if (container.hasPanels(true)) {
-			//	return;	//has children, do not remove
+			//TODO check whether this condition works or not
+			var panels:Vector.<IPanel> = container.getPanels(true);
+			if (panels.length > 1 || (panels.length == 1 && panels[0] != evt.relatedPanel)) {
+				return;	//has children, do not remove - either more than the panel being removed, or a different panel from that which is being removed
 			}
 			var parentContainer:IContainer = cl_treeResolver.findParentContainer(container as DisplayObject)
 			if (parentContainer) {
 				parentContainer.removeContainer(container)
 			}
-			container.resetContainer()
+			container.panelList = null
 		}
 		
 		private function removeContainerListenersOnLink(evt:Event):void 
@@ -465,10 +593,10 @@ package airdock
 			//if it's the root (i.e. findRootContainer(target) == target (or != evt.currentTarget), then it won't remove the listeners
 			var target:IContainer = evt.target as IContainer
 			var root:IContainer = cl_treeResolver.findRootContainer(target)
-			if (target && !isForeignContainer(target) && root != target && root == evt.currentTarget)
+			if (target && !isForeignContainer(target) && root != target)
 			{
 				removeContainerListeners(target)
-				dct_containerCounter[target] = false;
+				dct_foreignCounter[target] = false;
 			}
 		}
 		
@@ -480,7 +608,7 @@ package airdock
 			if (target && !isForeignContainer(target) && target != evt.currentTarget)
 			{
 				addContainerListeners(target)
-				dct_containerCounter[target] = true
+				dct_foreignCounter[target] = true
 			}
 		}
 		
@@ -495,31 +623,22 @@ package airdock
 			if (container)
 			{
 				var side:int;
+				var point:Point;
 				var tolerance:Number = cl_resizer.tolerance
-				var point:Point = new Point(targetContainer.x, targetContainer.y)
 				var localXPercent:Number = targetContainer.mouseX / targetContainer.width
 				var localYPercent:Number = targetContainer.mouseY / targetContainer.height
-				if (localXPercent <= tolerance || localXPercent >= (1 - tolerance))
-				{
-					point.x += Math.round(localXPercent) * targetContainer.width
-					point.y += cl_resizer.preferredYPercentage * targetContainer.height
-					if (localXPercent <= tolerance) {
-						side = PanelContainerSide.LEFT
-					}
-					else {
-						side = PanelContainerSide.RIGHT
-					}
+				
+				if (localXPercent <= tolerance) {
+					side = PanelContainerSide.LEFT
 				}
-				else if (localYPercent <= tolerance || localYPercent >= (1 - tolerance))
-				{
-					point.y += Math.round(localYPercent) * targetContainer.height
-					point.x += cl_resizer.preferredXPercentage * targetContainer.width
-					if (localYPercent <= tolerance) {
-						side = PanelContainerSide.TOP
-					}
-					else {
-						side = PanelContainerSide.BOTTOM
-					}
+				else if(localXPercent >= (1 - tolerance)) {
+					side = PanelContainerSide.RIGHT
+				}
+				else if (localYPercent <= tolerance) {
+					side = PanelContainerSide.TOP
+				}
+				else if(localYPercent >= (1 - tolerance)) {
+					side = PanelContainerSide.BOTTOM
 				}
 				else 
 				{
@@ -529,18 +648,88 @@ package airdock
 					return;
 				}
 				
-				if (!PanelContainerSide.isComplementary(container.currentSideCode, side)) {
-					return;
+				/* HOW THE RESIZER IS RESOLVED WITH RESPECT TO CONTAINERS:
+				 * go up a container until it is complementary:
+				 * targetContainer: check if the container's side code is T or B. then, if it is the same as targetContainer's side code
+				 * for the given containers:
+				 *    |------|----|   -|
+				 *    |      | T  |    |
+				 *    |   L  |----|    }- B
+				 *    |      | B  |    |
+				 *    |------|----|   -|
+				 * 
+				 *    |-----v-----|
+				 *          |
+				 *          R
+				 * 
+				 * suppose targetContainer is T as labeled above and need to find resizer below it
+				 * side code of container = B. target container does not match, i.e. container.getSide(container.sideCode) != targetContainer
+				 * (but is complementary)
+				 * so display the resizer only if the side is bottom, i.e. same as container side code
+				 * 
+				 * suppose targetContainer is B as labeled above and need to find resizer above it
+				 * side code of container = B. target container matches, i.e. container.getSide(container.sideCode) == targetContainer
+				 * so display the resizer only if the side is top, i.e. complementary (but not equal) of container side code
+				 * 
+				 * suppose targetContainer is B or T as labeled above, and need to find resizer left of it
+				 * side code of container = B. not complementary or equal, so skip up and set container = parent container, and targetContainer = container
+				 * now parent container side code = R. container matches now, i.e. container.getSide(container.sideCode) == targetContainer
+				 * so display the resizer only if the side is left, i.e. complementary (but not equal) of container side code
+				 * 
+				 * suppose targetContainer is L as labeled above and need to find resizer to the right of it
+				 * side code of container = R. target container does not match i.e. container.getSide(container.sideCode) != targetContainer
+				 * (but is complementary)
+				 * so display the resizer only if side is right, i.e. same as container side code.
+				 * 
+				 * in all the above cases, there is a similarity:
+				 * 
+				 * 1. get targetContainer
+				 * 2. is container.getSide(container.sideCode) == targetContainer?
+				 * 		if yes, then display resizer only if the side is complementary - but not equal - of container side code
+				 * 3. else, is the side code of container at least complementary or equal to target container?
+				 * 		if yes, then display resizer only if the side is equal to the container side code
+				 * 4. else, if it is neither same nor complementary (e.g. L and B or R and T)
+				 * 		then set targetContainer as current container and skip currentcontainer up one level
+				 * 
+				 * see implementation below.
+				 */
+				
+				var displayResizer:Boolean;
+				while (container)
+				{
+					if (PanelContainerSide.isComplementary(side, container.sideCode))
+					{
+						var targetContainerEqual:Boolean = (container.getSide(container.sideCode) == targetContainer);
+						var sidesMatch:Boolean = (side == container.sideCode);
+						//i.e. targetContainerEqual xor sidesMatch
+						displayResizer = targetContainerEqual != sidesMatch;
+						break;
+					}
+					else
+					{
+						targetContainer = container;
+						container = cl_treeResolver.findParentContainer(container as DisplayObject);
+					}
 				}
-				else while(container && (!PanelContainerSide.isComplementary(container.currentSideCode, side) || container.currentSideCode == side)) {
-					container = cl_treeResolver.findParentContainer(container as DisplayObject)
+				
+				point = new Point(targetContainer.x, targetContainer.y)
+				if (side == PanelContainerSide.TOP || side == PanelContainerSide.BOTTOM)
+				{
+					point.y += Math.round(localYPercent) * targetContainer.height
+					point.x += cl_resizer.preferredXPercentage * targetContainer.width
 				}
-				if (container)
+				else
+				{
+					point.x += Math.round(localXPercent) * targetContainer.width
+					point.y += cl_resizer.preferredYPercentage * targetContainer.height
+				}
+				
+				if (container && displayResizer)
 				{
 					cl_resizer.maxSize = container.getBounds(null)
 					point = container.localToGlobal(point)
-					cl_resizer.setContainer(container)
-					cl_resizer.setSideCode(side)
+					cl_resizer.container = container
+					cl_resizer.sideCode = side
 					cl_resizer.x = point.x;
 					cl_resizer.y = point.y;
 					container.stage.addChild(cl_resizer as DisplayObject)
@@ -564,7 +753,7 @@ package airdock
 		
 		private function showDockHelperOnEvent(evt:NativeDragEvent):void 
 		{
-			if(!cl_dockHelper) {
+			if(!cl_dockHelper || !(evt.clipboard.hasFormat(cl_dockFormat.panelFormat) || evt.clipboard.hasFormat(cl_dockFormat.containerFormat))) {
 				return;
 			}
 			else if (evt.currentTarget == cl_dockHelper) {
@@ -592,99 +781,9 @@ package airdock
 			var container:IContainer = evt.relatedContainer;
 			var rootContainer:IContainer = evt.currentTarget as IContainer
 			//don't modify foreign container's containers, since that container's Docker will already have listeners for it
-			if (!isForeignContainer(rootContainer))
-			{
-				//if it has no sides and it has panels, create a new panelList for it; otherwise, remove it
+			//if it has no sides and it has panels, create a new panelList for it; otherwise, remove it
+			if (!(evt.isDefaultPrevented() || isForeignContainer(rootContainer))) {
 				container.panelList = ((container.hasSides || !container.hasPanels(true)) || cl_panelListFactory.createPanelList()) as IPanelList
-			}
-		}
-		
-		public function setPanelFactory(panelFactory:IPanelFactory):void
-		{
-			if(!panelFactory) {
-				throw new ArgumentError("Error: Argument panelFactory must be a non-null value.");
-			}
-			else {
-				cl_panelFactory = panelFactory
-			}
-		}
-		
-		public function setContainerFactory(containerFactory:IContainerFactory):void 
-		{
-			if(!containerFactory) {
-				throw new ArgumentError("Error: Argument containerFactory must be a non-null value.");
-			}
-			else {
-				cl_containerFactory = containerFactory
-			}
-		}
-		
-		/**
-		 * Convenience function for removing the panel list UI for all containers.
-		 */
-		public function unsetPanelListFactory():void {
-			setPanelListFactory(null)
-		}
-		
-		public function setPanelListFactory(panelListFactory:IPanelListFactory):void
-		{
-			cl_panelListFactory = panelListFactory
-			var container:IContainer;
-			for (var obj:Object in dct_containers)
-			{
-				container = getContainerFromWindow(obj as NativeWindow, false)
-				if (container)
-				{
-					if (panelListFactory) {
-						container.panelList = panelListFactory.createPanelList()
-					}
-					else {
-						container.panelList = null;
-					}
-				}
-			}
-		}
-		
-		/**
-		 * Sets the dock helper UI for allowing the user to dock panels and containers.
-		 * Setting this to null will effectively prevent the user from docking panels and containers, but will not prevent programmatic docking.
-		 */
-		public function set dockHelper(dockHelper:IDockHelper):void
-		{
-			var handles:DisplayObject = cl_dockHelper as DisplayObject
-			if (handles)
-			{
-				removeDockHelperListeners(handles as IDockHelper)
-				if (handles.parent) {
-					handles.parent.removeChild(handles)
-				}
-			}
-			cl_dockHelper = dockHelper
-			if (dockHelper)
-			{
-				handles = dockHelper as DisplayObject
-				if (handles)
-				{
-					dockHelper.draw(dockHelper.getDefaultWidth(), dockHelper.getDefaultHeight());
-					addDockHelperListeners(dockHelper);
-				}
-			}
-		}
-		
-		public function set resizeHelper(resizer:IResizer):void
-		{
-			var prevSizer:DisplayObject = cl_resizer as DisplayObject
-			if (prevSizer)
-			{
-				removeResizerListeners(prevSizer as IResizer)
-				if (prevSizer.parent) {
-					prevSizer.parent.removeChild(prevSizer)
-				}
-			}
-			
-			cl_resizer = resizer
-			if (resizer) {
-				addResizerListeners(resizer);
 			}
 		}
 		
@@ -706,7 +805,7 @@ package airdock
 				prevContainer.removePanel(panel);
 				if (prevContainerState == PanelContainerState.DOCKED)
 				{
-					var window:NativeWindow = getWindowFromContainer(cl_treeResolver.findRootContainer(prevContainer));
+					var window:NativeWindow = getContainerWindow(cl_treeResolver.findRootContainer(prevContainer));
 					//false for getWindowFromPanel since we're comparing - a null window cannot container the panel
 					if (window && getWindowFromPanel(panel, false) == window) {
 						window.visible = false
@@ -718,8 +817,8 @@ package airdock
 		
 		private function shadowContainer(container:IContainer, otherContainer:IContainer):void 
 		{
-			var fromWindow:NativeWindow = getWindowFromContainer(container)
-			var otherPanelWindow:NativeWindow = getWindowFromContainer(otherContainer)
+			var fromWindow:NativeWindow = getContainerWindow(container)
+			var otherPanelWindow:NativeWindow = getContainerWindow(otherContainer)
 			if (fromWindow && otherPanelWindow && otherContainer && container.hasPanels(true))
 			{
 				//shadow the panel with other window's panel 
@@ -727,27 +826,28 @@ package airdock
 				var containerWidth:Number = container.width
 				otherContainer.height = otherPanelWindow.stage.stageHeight = containerHeight
 				otherContainer.width = otherPanelWindow.stage.stageWidth = containerWidth
-				otherPanelWindow.visible = fromWindow.visible;
 				otherPanelWindow.x = fromWindow.x
 				otherPanelWindow.y = fromWindow.y
-				container.mergeIntoContainer(otherContainer)
 				otherPanelWindow.orderInBackOf(fromWindow)
+				container.mergeIntoContainer(otherContainer)
+				otherPanelWindow.visible = fromWindow.visible;
 			}
 		}
 		
 		/**
 		 * Moves the panels from the given container to the container of the first panel returned by the panelRetriever function. Usually, this is the getFirstPanel function.
-		 * @param	excluding		The panel to ignore when searching for the first panel to take. This is usually used whenever a docked panel is to be shadowed and the function is called before the panel is actually removed;
+		 * @param	excluding		The set of panels to ignore when searching for the first panel to take. 
+		 * 							This is usually used whenever a docked panel is to be shadowed and the function is called before the panel is actually removed;
 		 * 							then, the panel (which is to be, but has not yet, removed) is passed in the excluding parameter.
+		 * 							It is also used when preventing undockable panels (i.e. panels with dockable set to false) from being moved to another container.
 		 * @param	container		The container to move panels from. This is usually the container of the panel, resolved by the tree resolver.
 		 * @param	panelRetriever	The panel retrieving function. This is a function which takes two parameters, (excluding, container), which returns a panel from the given container. 
 		 * 							The contents of the container passed in the moveExistingPanelsFrom function is then moved into the container of the panel returned by the panelRetriever function.
-		 * @return	The container into which the existing contents (excluding the panel, and by extension its container, passed in the excluding parameter) of the container passed to this function are moved into.
+		 * @return	The container into which the existing contents (excluding the panels, and by extension their containers, passed in the excluding parameter) of the container passed to this function are moved into.
 		 */
-		private function moveExistingPanelsFrom(excluding:IPanel, container:IContainer, panelRetriever:Function):IContainer
+		private function moveExistingPanelsFrom(excluding:Vector.<IPanel>, container:IContainer, panelRetriever:Function):IContainer
 		{
-			var window:NativeWindow = getWindowFromContainer(container)
-			if(!(window && panelRetriever != null)) {
+			if(panelRetriever == null) {
 				return null;
 			}
 			//suppose main panel of container ie panel's original container is removed from window
@@ -765,36 +865,39 @@ package airdock
 		}
 		
 		/**
-		 * Performs a deep search in the given container for the first panel it can find, excluding the panel supplied in the excluding parameter.
+		 * Performs a deep search in the given container for the first panel it can find, excluding the panels supplied in the excluding parameter.
 		 * @param	excluding	
 		 * @param	inContainer
 		 * @return
 		 */
-		private function getFirstPanel(excluding:IPanel, inContainer:IContainer):IPanel
+		private function getFirstPanel(excluding:Vector.<IPanel>, inContainer:IContainer):IPanel
 		{
 			if(!inContainer) {
 				return null;
 			}
 			
 			var result:IPanel;
-			var basePanels:Array = inContainer.panels;
+			var basePanels:Vector.<IPanel> = inContainer.getPanels(false);
 			if (basePanels.length)
 			{
-				result = basePanels.pop()
-				while(excluding && basePanels.length && excluding == result) {
+				do {
 					result = basePanels.pop();	//skip over excluded panel
+				} while (excluding && basePanels.length && excluding.indexOf(result) != -1);
+				
+				if(excluding && excluding.indexOf(result) != -1) {
+					result = null;	//no more panels left, all excluded
 				}
 				return result
 			}
-			var currentSideCode:int = inContainer.currentSideCode
+			var sideCode:int = inContainer.sideCode
 			if (inContainer.hasSides)
 			{
-				result = getFirstPanel(excluding, inContainer.getSide(currentSideCode))
-				if(result && result != excluding) {
+				result = getFirstPanel(excluding, inContainer.getSide(sideCode))
+				if(result && (!excluding || excluding.indexOf(result) == -1)) {
 					return result
 				}
-				result = getFirstPanel(excluding, inContainer.getSide(PanelContainerSide.getComplementary(currentSideCode)))
-				if(result && result != excluding) {
+				result = getFirstPanel(excluding, inContainer.getSide(PanelContainerSide.getComplementary(sideCode)))
+				if(result && (!excluding || excluding.indexOf(result) == -1)) {
 					return result
 				}
 			}
@@ -803,7 +906,7 @@ package airdock
 		
 		private function startDragOnEvent(evt:PanelContainerEvent):void 
 		{
-			if(checkResizeOccurring()) {
+			if(checkResizeOccurring() || evt.isDefaultPrevented()) {
 				return;
 			}
 			var panel:IPanel = evt.relatedPanel;
@@ -870,7 +973,7 @@ package airdock
 		
 		private function togglePanelStateOnEvent(evt:PanelContainerEvent):void 
 		{
-			if(checkResizeOccurring()) {
+			if(checkResizeOccurring() || evt.isDefaultPrevented()) {
 				return;
 			}
 			var container:IContainer = evt.relatedContainer;
@@ -878,24 +981,31 @@ package airdock
 			var sideInfo:PanelStateInformation;
 			var containerWindow:NativeWindow;
 			var currContainer:IContainer;
+			var prevState:Boolean = getAuthoritativeContainerState(container)
 			if (panel)
 			{
+				if(!panel.dockable) {
+					return;
+				}
 				container = cl_treeResolver.findParentContainer(panel as DisplayObject)
 				if (container)
 				{
+					const panelList:Vector.<IPanel> = new <IPanel>[panel]
 					var rootContainer:IContainer = cl_treeResolver.findRootContainer(container)
 					//false for both gets() since comparison only done to check for ownership
 					if (rootContainer && getContainerFromWindow(getWindowFromPanel(panel, false), false) == rootContainer) {
-						moveExistingPanelsFrom(panel, rootContainer, getFirstPanel)	//shadow container if it is being docked while it has other panels in its window+container
+						moveExistingPanelsFrom(panelList, rootContainer, getFirstPanel)	//shadow container if it is being docked while it has other panels in its window+container
 					}
-					if (getAuthoritativeContainerState(container) == PanelContainerState.INTEGRATED) {
+					if (getAuthoritativeContainerState(container) == PanelContainerState.INTEGRATED)
+					{
 						dockPanel(panel)
+						showPanel(panel)
 					}
 					else
 					{
-						sideInfo = getPanelStateInfo(panel)
-						addPanelToSides(panel, sideInfo.previousRoot, sideInfo.integratedCode)
-						containerWindow = getWindowFromContainer(container)
+						sideInfo = getInternalPanelStateInfo(panel)
+						addPanelToSideSequence(panel, sideInfo.previousRoot, sideInfo.integratedCode)
+						containerWindow = getContainerWindow(container)
 						if (containerWindow) {
 							containerWindow.visible = false;
 						}
@@ -904,33 +1014,39 @@ package airdock
 			}
 			else if (container)
 			{
-				if (getAuthoritativeContainerState(container) == PanelContainerState.INTEGRATED) {
-					dockAllPanelsInContainer(container)
+				if (getAuthoritativeContainerState(container) != PanelContainerState.DOCKED) {
+					dockAllPanelsInContainer(filterUndockablePanels(container.getPanels(false)), container)
 				}
 				else
 				{
-					var panels:Array = container.panels
+					//integrate panels
+					var panels:Vector.<IPanel> = filterUndockablePanels(container.getPanels(false))
 					panel = panels.shift()
 					if (panel)
 					{
-						sideInfo = getPanelStateInfo(panel)
-						currContainer = addPanelToSides(panel, sideInfo.previousRoot, sideInfo.integratedCode)
+						sideInfo = getInternalPanelStateInfo(panel)
+						currContainer = addPanelToSideSequence(panel, sideInfo.previousRoot, sideInfo.integratedCode)
 						for (var i:uint = 0; i < panels.length; ++i) {
 							currContainer.addToSide(PanelContainerSide.FILL, panels[i] as IPanel)
 						}
-						containerWindow = getWindowFromContainer(container)
+						containerWindow = getContainerWindow(container)
 						if (containerWindow) {
 							containerWindow.visible = false;
 						}
 					}
 				}
 			}
+			dispatchEvent(new PanelContainerStateEvent(PanelContainerStateEvent.STATE_TOGGLED, evt.relatedPanel, evt.relatedContainer, prevState, !prevState, false, false))
+			trace(cl_treeResolver.findRootContainer(evt.currentTarget as IContainer).name)
 		}
 		
-		private function addPanelToSides(panel:IPanel, container:IContainer, sideCode:String):IContainer
+		private function addPanelToSideSequence(panel:IPanel, container:IContainer, sideCode:String):IContainer
 		{
 			for (var i:uint = 0, currContainer:IContainer = container; currContainer && i < sideCode.length; ++i) {
-				currContainer = currContainer.addToSide(PanelContainerSide.toInteger(sideCode.charAt(i)), panel)
+				currContainer = currContainer.fetchSide(PanelContainerSide.toInteger(sideCode.charAt(i)))
+			}
+			if(currContainer) {
+				currContainer.addToSide(PanelContainerSide.FILL, panel);
 			}
 			return currContainer
 		}
@@ -944,17 +1060,7 @@ package airdock
 			return result
 		}
 		
-		public function dockPanel(panel:IPanel):void 
-		{
-			var basePanelWindow:NativeWindow = getWindowFromPanel(panel, true)
-			var baseContainer:IContainer = getContainerFromWindow(basePanelWindow, true)
-			baseContainer.addToSide(PanelContainerSide.FILL, panel);
-			basePanelWindow.stage.stageHeight = baseContainer.height
-			basePanelWindow.stage.stageWidth = baseContainer.width
-			basePanelWindow.activate();
-		}
-		
-		private function dockAllPanelsInContainer(container:IContainer):void
+		private function dockAllPanelsInContainer(excluding:Vector.<IPanel>, container:IContainer):void
 		{
 			var basePanelWindow:NativeWindow;
 			var baseContainer:IContainer;
@@ -963,7 +1069,10 @@ package airdock
 			}
 			else if (getAuthoritativeContainerState(container) != PanelContainerState.DOCKED)
 			{
-				var panels:Array = container.panels;
+				var originalPanels:Vector.<IPanel> = container.getPanels(false);
+				var panels:Vector.<IPanel> = originalPanels.filter(function(item:IPanel, index:int, arr:Vector.<IPanel>):Boolean {
+					return (!excluding || excluding.indexOf(item) == -1);	//exclude non-dockable panels from docking
+				});
 				if (!panels.length) {
 					return;
 				}
@@ -972,15 +1081,23 @@ package airdock
 				var parentContainer:IContainer = cl_treeResolver.findParentContainer(container as DisplayObject);
 				basePanelWindow = getWindowFromPanel(currPanel, true)
 				baseContainer = getContainerFromWindow(basePanelWindow, true)
-				container.mergeIntoContainer(baseContainer)
-				if (parentContainer) {
+				if (originalPanels.length == panels.length) {	//i.e. when no panels have been excluded from docking
+					container.mergeIntoContainer(baseContainer)
+				}
+				else for (var i:uint = 0; i < panels.length; ++i) {
+					baseContainer.addToSide(PanelContainerSide.FILL, panels[i]);
+				}
+				
+				panels = container.getPanels(false)	//find out how many non-dockable panels remain (after docking to container)
+				if (parentContainer && !(panels && panels.length)) {
 					parentContainer.removeContainer(container)
 				}
 			}
 			else
 			{
+				//already docked; activate window
 				baseContainer = container
-				basePanelWindow = getWindowFromContainer(container)
+				basePanelWindow = getContainerWindow(container)
 			}
 			
 			if (basePanelWindow)
@@ -989,33 +1106,6 @@ package airdock
 				basePanelWindow.stage.stageHeight = baseContainer.height
 				basePanelWindow.activate()
 			}
-		}
-		
-		public function integratePanel(panel:IPanel, container:IContainer, side:int):IContainer
-		{
-			var panelContainer:IContainer = cl_treeResolver.findParentContainer(panel as DisplayObject)
-			if(panelContainer && container == panelContainer && side == container.currentSideCode) {
-				return container
-			}
-			//false for the two below since we're comparing
-			var window:NativeWindow = getWindowFromPanel(panel, false)
-			var origContainer:IContainer = getContainerFromWindow(window, false)
-			if (panelContainer)
-			{
-				panelContainer.removePanel(panel)
-				if (panelContainer == origContainer) {
-					window.visible = false
-				}
-			}
-			var newSide:IContainer = container.addToSide(side, panel)
-			var rootContainer:IContainer = cl_treeResolver.findRootContainer(container)
-			var containerWindow:NativeWindow = getWindowFromContainer(rootContainer)
-			if (containerWindow)
-			{
-				containerWindow.stage.stageHeight = rootContainer.height
-				containerWindow.stage.stageWidth = rootContainer.width
-			}
-			return newSide
 		}
 		
 		private function renameWindow(evt:PanelPropertyChangeEvent):void
@@ -1056,33 +1146,6 @@ package airdock
 			}
 		}
 		
-		public function set crossDockingPolicy(policyFlags:int):void {
-			i_crossDockingPolicy = policyFlags
-		}
-		
-		public function get crossDockingPolicy():int {
-			return i_crossDockingPolicy
-		}
-		
-		public function get mainContainer():DisplayObjectContainer {
-			return dsp_mainContainer;
-		}
-		
-		public function set mainContainer(container:DisplayObjectContainer):void
-		{
-			if (dsp_mainContainer)
-			{
-				dsp_mainContainer.removeEventListener(NativeDragEvent.NATIVE_DRAG_UPDATE, removeContainerOnEvent)
-				dsp_mainContainer.removeEventListener(NativeDragEvent.NATIVE_DRAG_COMPLETE, dockContainerIfInvalid)
-			}
-			dsp_mainContainer = container;
-			if (container)
-			{
-				container.addEventListener(NativeDragEvent.NATIVE_DRAG_UPDATE, removeContainerOnEvent)
-				container.addEventListener(NativeDragEvent.NATIVE_DRAG_COMPLETE, dockContainerIfInvalid)
-			}
-		}
-		
 		private function setRoot(evt:PanelContainerEvent):void 
 		{
 			var parent:DisplayObject;
@@ -1096,11 +1159,10 @@ package airdock
 				return;
 			}
 			for (parent = panel as DisplayObject, level = 0; parent; parent = parent.parent, ++level) { }
-			panelStateInfo = getPanelStateInfo(panel)
+			panelStateInfo = getInternalPanelStateInfo(panel)
 			panelStateInfo.integratedCode = currentCode;
 			panelStateInfo.previousRoot = root;
 			
-			//BUG here - incorrect code set for foreign panels
 			if(!currentCode) {
 				return;
 			}
@@ -1124,18 +1186,455 @@ package airdock
 			}
 		}
 		
+		private function addWindowListeners(window:NativeWindow):void
+		{
+			window.addEventListener(NativeWindowBoundsEvent.RESIZE, resizeContainerOnEvent, false, 0, true)
+			window.addEventListener(Event.CLOSING, preventWindowClose, false, 0, true)
+		}
+		
+		private function removeWindowListeners(window:NativeWindow):void
+		{
+			window.removeEventListener(NativeWindowBoundsEvent.RESIZE, resizeContainerOnEvent)
+			window.removeEventListener(Event.CLOSING, preventWindowClose)
+		}
+		
+		private function preventWindowClose(evt:Event):void 
+		{
+			evt.preventDefault();
+			(evt.currentTarget as NativeWindow).visible = false;
+		}
+		
+		private function addPanelListeners(panel:IPanel):void {
+			panel.addEventListener(PanelPropertyChangeEvent.PROPERTY_CHANGED, renameWindow, false, 0, true)
+		}
+		
+		private function removePanelListeners(panel:IPanel):void {
+			panel.removeEventListener(PanelPropertyChangeEvent.PROPERTY_CHANGED, renameWindow)
+		}
+		
+		private function dockPanelOnCrossViolation(evt:Event):void 
+		{
+			var panel:IPanel = evt.currentTarget as IPanel
+			panel.removeEventListener(Event.ADDED, dockPanelOnCrossViolation)
+			if(isForeignPanel(panel)) {
+				return;
+			}
+			var parentContainer:IContainer = cl_treeResolver.findParentContainer(panel as DisplayObject)
+			var rootContainer:IContainer = cl_treeResolver.findRootContainer(parentContainer)
+			//dock all panels in the parent container if cross-docking is disabled
+			//i.e. so as to prevent them from being integrated into the other Docker's containers
+			if (rootContainer && isForeignContainer(rootContainer))
+			{
+				dockPanel(panel)
+				if (cl_dragStruct) {
+					moveWindowTo(getWindowFromPanel(panel, true), cl_dragStruct.localX, cl_dragStruct.localY, cl_dragStruct.convertToScreen())
+				}
+				showPanel(panel)
+			}
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function getPanelWindows():Vector.<IPair>
+		{
+			var panelWindows:Vector.<IPair> = new Vector.<IPair>()
+			for (var obj:Object in dct_foreignCounter)
+			{
+				if (obj is IPanel) {
+					panelWindows.push(new LazyPair(obj as IPanel, getWindowFromPanel))
+				}
+			}
+			return panelWindows
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function getPanelContainers():Vector.<IPair>
+		{
+			var panelContainers:Vector.<IPair> = new Vector.<IPair>()
+			for (var obj:Object in dct_foreignCounter)
+			{
+				if (obj is IPanel) {
+					panelContainers.push(new StaticPair(obj as IPanel, cl_treeResolver.findParentContainer(obj as DisplayObject)))
+				}
+			}
+			return panelContainers
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function setupPanel(panel:IPanel):void
+		{
+			dct_foreignCounter[panel] = true;
+			addPanelListeners(panel)
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function setupWindow(window:NativeWindow):void {
+			addWindowListeners(window)
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function unhookWindow(window:NativeWindow):void {
+			removeWindowListeners(window)
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function unhookPanel(panel:IPanel):void
+		{
+			if(!panel) {
+				return;
+			}
+			delete dct_panelStateInfo[panel];
+			delete dct_foreignCounter[panel];
+			removePanelListeners(panel)
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function createPanel(options:PanelConfig):IPanel
+		{
+			var panel:IPanel = cl_panelFactory.createPanel(options)
+			setupPanel(panel)
+			return panel
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function createWindow(panel:IPanel):NativeWindow
+		{
+			if(!panel) {
+				return null
+			}
+			else if(panel in dct_windows) {
+				return dct_windows[panel] as NativeWindow
+			}
+			
+			var options:NativeWindowInitOptions = defaultWindowOptions
+			options.resizable = panel.resizable
+			
+			var window:NativeWindow = new NativeWindow(options)
+			var stage:Stage = window.stage
+			addWindowListeners(window)
+			dct_windows[panel] = window
+			window.title = panel.panelName
+			stage.stageWidth = panel.width
+			stage.stageHeight = panel.height
+			stage.align = StageAlign.TOP_LEFT
+			stage.scaleMode = StageScaleMode.NO_SCALE
+			return window
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function createContainer(options:ContainerConfig):IContainer
+		{
+			var container:IContainer = cl_containerFactory.createContainer(options)
+			container.panelList = cl_panelListFactory.createPanelList()
+			dct_foreignCounter[container] = true
+			addContainerListeners(container)
+			return container
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function setPanelFactory(panelFactory:IPanelFactory):void
+		{
+			if(!panelFactory) {
+				throw new ArgumentError("Error: Argument panelFactory must be a non-null value.");
+			}
+			else {
+				cl_panelFactory = panelFactory
+			}
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function setContainerFactory(containerFactory:IContainerFactory):void 
+		{
+			if(!containerFactory) {
+				throw new ArgumentError("Error: Argument containerFactory must be a non-null value.");
+			}
+			else {
+				cl_containerFactory = containerFactory
+			}
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function setPanelListFactory(panelListFactory:IPanelListFactory):void
+		{
+			cl_panelListFactory = panelListFactory
+			var container:IContainer;
+			for (var obj:Object in dct_containers)
+			{
+				container = getContainerFromWindow(obj as NativeWindow, false)
+				if (container)
+				{
+					if (panelListFactory) {
+						container.panelList = panelListFactory.createPanelList()
+					}
+					else {
+						container.panelList = null;
+					}
+				}
+			}
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function set dockHelper(dockHelper:IDockHelper):void
+		{
+			var handles:DisplayObject = cl_dockHelper as DisplayObject
+			if (handles)
+			{
+				removeDockHelperListeners(handles as IDockHelper)
+				if (handles.parent) {
+					handles.parent.removeChild(handles)
+				}
+			}
+			cl_dockHelper = dockHelper
+			if (dockHelper)
+			{
+				handles = dockHelper as DisplayObject
+				if (handles)
+				{
+					dockHelper.draw(dockHelper.getDefaultWidth(), dockHelper.getDefaultHeight());
+					addDockHelperListeners(dockHelper);
+				}
+			}
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function set resizeHelper(resizer:IResizer):void
+		{
+			var prevSizer:DisplayObject = cl_resizer as DisplayObject
+			if (prevSizer)
+			{
+				removeResizerListeners(prevSizer as IResizer)
+				if (prevSizer.parent) {
+					prevSizer.parent.removeChild(prevSizer)
+				}
+			}
+			
+			cl_resizer = resizer
+			if (resizer) {
+				addResizerListeners(resizer);
+			}
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function dockPanel(panel:IPanel):IContainer
+		{
+			var basePanelWindow:NativeWindow = getWindowFromPanel(panel, true)
+			var baseContainer:IContainer = getContainerFromWindow(basePanelWindow, true)
+			baseContainer.addToSide(PanelContainerSide.FILL, panel);
+			basePanelWindow.stage.stageHeight = baseContainer.height
+			basePanelWindow.stage.stageWidth = baseContainer.width
+			
+			return baseContainer
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function showPanel(panel:IPanel):void
+		{
+			//shows the panel and dispatches a change event
+			//returns if everything is the same
+			if(!panel) {
+				return;
+			}
+			var container:IContainer = cl_treeResolver.findParentContainer(panel as DisplayObject)
+			var dockToPreviousRoot:Boolean;
+			if (container)
+			{
+				if (isForeignContainer(container)) {
+					return;
+				}
+				else if (getAuthoritativeContainerState(container) == PanelContainerState.DOCKED)
+				{
+					var window:NativeWindow = getContainerWindow(container);
+					if(window.visible) {
+						return;
+					}
+					window.activate()
+				}
+				else {
+					dockToPreviousRoot = true;
+				}
+			}
+			
+			if(dockToPreviousRoot || !container)
+			{
+				var sideInfo:PanelStateInformation = getInternalPanelStateInfo(panel)
+				if(sideInfo.previousRoot == cl_treeResolver.findRootContainer(container)) {
+					return;
+				}
+				addPanelToSideSequence(panel, sideInfo.previousRoot, sideInfo.integratedCode)
+			}
+			dispatchEvent(new PanelContainerStateEvent(PanelContainerStateEvent.VISIBILITY_TOGGLED, panel, cl_treeResolver.findParentContainer(panel as DisplayObject), false, true, false, false))
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function hidePanel(panel:IPanel):void
+		{
+			if(!panel) {
+				return;
+			}
+			var container:IContainer = cl_treeResolver.findParentContainer(panel as DisplayObject);
+			if(!container || isForeignContainer(container)) {
+				return;
+			}
+			else 
+			{
+				var sourceWindow:NativeWindow = getContainerWindow(container);
+				if(getAuthoritativeContainerState(container) == PanelContainerState.DOCKED && sourceWindow && container.getPanelCount(true) == 1) {
+					sourceWindow.visible = false;
+				}
+				else {
+					container.removePanel(panel)
+				}
+			}
+			dispatchEvent(new PanelContainerStateEvent(PanelContainerStateEvent.VISIBILITY_TOGGLED, panel, container, true, false, false, false))
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function movePanelToContainer(panel:IPanel, container:IContainer, side:int):IContainer
+		{
+			var panelContainer:IContainer = cl_treeResolver.findParentContainer(panel as DisplayObject)
+			if(panelContainer && container == panelContainer && side == container.sideCode) {
+				return container
+			}
+			//false for the two below since we're comparing
+			var window:NativeWindow = getWindowFromPanel(panel, false)
+			var origContainer:IContainer = getContainerFromWindow(window, false)
+			if (panelContainer)
+			{
+				panelContainer.removePanel(panel)
+				if (panelContainer == origContainer) {
+					window.visible = false
+				}
+			}
+			var newSide:IContainer = container.addToSide(side, panel)
+			var rootContainer:IContainer = cl_treeResolver.findRootContainer(container)
+			var containerWindow:NativeWindow = getContainerWindow(rootContainer)
+			if (containerWindow)
+			{
+				containerWindow.stage.stageHeight = rootContainer.height
+				containerWindow.stage.stageWidth = rootContainer.width
+			}
+			return newSide
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function isPanelVisible(panel:IPanel):Boolean
+		{
+			if(!panel) {
+				return false;
+			}
+			var container:IContainer = cl_treeResolver.findParentContainer(panel as DisplayObject);
+			if(!container || isForeignContainer(container)) {
+				return false
+			}
+			else if(getAuthoritativeContainerState(container) == PanelContainerState.DOCKED) {
+				return getContainerWindow(container).visible
+			}
+			return !!container.stage
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function set crossDockingPolicy(policyFlags:int):void {
+			i_crossDockingPolicy = policyFlags
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function get crossDockingPolicy():int {
+			return i_crossDockingPolicy
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function get mainContainer():DisplayObjectContainer {
+			return dsp_mainContainer;
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function set mainContainer(container:DisplayObjectContainer):void
+		{
+			if (dsp_mainContainer)
+			{
+				dsp_mainContainer.removeEventListener(NativeDragEvent.NATIVE_DRAG_START, preventDockIfInvalid)
+				dsp_mainContainer.removeEventListener(NativeDragEvent.NATIVE_DRAG_UPDATE, removeContainerOnEvent)
+				dsp_mainContainer.removeEventListener(NativeDragEvent.NATIVE_DRAG_COMPLETE, dockContainerIfInvalidDropTarget)
+			}
+			dsp_mainContainer = container;
+			if (container)
+			{
+				container.addEventListener(NativeDragEvent.NATIVE_DRAG_START, preventDockIfInvalid)
+				container.addEventListener(NativeDragEvent.NATIVE_DRAG_UPDATE, removeContainerOnEvent)
+				container.addEventListener(NativeDragEvent.NATIVE_DRAG_COMPLETE, dockContainerIfInvalidDropTarget)
+			}
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
 		public function get dragImageHeight():Number {
 			return num_thumbHeight
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function set dragImageHeight(value:Number):void {
 			num_thumbHeight = value;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function get dragImageWidth():Number {
 			return num_thumbWidth
 		}
 		
+		/**
+		 * Unloads all the windows and removes all listeners and other references of the panels registered to this Docker.
+		 * Once this method is called, it is advised not to use the Docker instance again, and to create a new one instead.
+		 */
 		public function unload():void
 		{
 			var obj:Object;
@@ -1152,48 +1651,28 @@ package airdock
 				delete dct_windows[obj]
 			}
 			num_thumbWidth = num_thumbHeight = NaN;
-			unsetPanelListFactory();
+			setPanelListFactory(null);
 			plc_dropTarget = null;
 			dockHelper = null;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function set dragImageWidth(value:Number):void {
 			num_thumbWidth = value
 		}
 		
-		private function addWindowListeners(window:NativeWindow):void {
-			window.addEventListener(NativeWindowBoundsEvent.RESIZE, resizeContainerOnEvent)
-		}
-		
-		private function addPanelListeners(panel:IPanel):void {
-			panel.addEventListener(PanelPropertyChangeEvent.PROPERTY_CHANGED, renameWindow, false, 0, true)
-		}
-		
-		private function dockPanelOnCrossViolation(evt:Event):void 
-		{
-			var panel:IPanel = evt.currentTarget as IPanel
-			var parentContainer:IContainer = cl_treeResolver.findParentContainer(panel as DisplayObject)
-			var rootContainer:IContainer = cl_treeResolver.findRootContainer(parentContainer)
-			//dock all panels in the parent container if cross-docking is disabled
-			//i.e. so as to prevent them from being integrated into the other Docker's containers
-			if (!crossDockingPolicy && rootContainer && isForeignContainer(rootContainer)) {
-				dockPanel(panel)
-			}
-			panel.removeEventListener(Event.ADDED, dockPanelOnCrossViolation)
-		}
-		
-		private function removePanelListeners(panel:IPanel):void {
-			panel.removeEventListener(PanelPropertyChangeEvent.PROPERTY_CHANGED, renameWindow)
-		}
-		
-		public static function get isSupported():Boolean {
-			return NativeWindow.isSupported && NativeDragManager.isSupported;
-		}
-		
+		/**
+		 * @inheritDoc
+		 */
 		public function get defaultWindowOptions():NativeWindowInitOptions {
 			return cl_defaultWindowOptions;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function set defaultWindowOptions(value:NativeWindowInitOptions):void
 		{
 			if(!value) {
@@ -1204,10 +1683,16 @@ package airdock
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function get defaultContainerOptions():ContainerConfig {
 			return cl_defaultContainerOptions;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function set defaultContainerOptions(value:ContainerConfig):void 
 		{
 			if(!value) {
@@ -1218,10 +1703,16 @@ package airdock
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function get dockFormat():IDockFormat {
 			return cl_dockFormat;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function set dockFormat(value:IDockFormat):void 
 		{
 			if(!value) {
@@ -1232,6 +1723,9 @@ package airdock
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function set treeResolver(value:ITreeResolver):void 
 		{
 			if(!value) {
@@ -1242,21 +1736,49 @@ package airdock
 			}
 		}
 		
-		[Inline]
-		private function isForeignContainer(container:IContainer):Boolean {
-			return !(container in dct_containerCounter)
+		/**
+		 * @inheritDoc
+		 */
+		public function addEventListener(type:String, listener:Function, useCapture:Boolean = false, priority:int = 0, useWeakReference:Boolean = false):void {
+			cl_dispatcher.addEventListener(type, listener, useCapture, priority, useWeakReference);
 		}
 		
 		/**
-		 * Get authoritative container state from root container:
-		 * 	a container that is part of a docked container will be docked
-		 * 	and a container that is part of an integrated container will be integrated
-		 * @param	container
-		 * @return	The state of the container.
+		 * @inheritDoc
 		 */
+		public function dispatchEvent(event:Event):Boolean {
+			return cl_dispatcher.dispatchEvent(event);
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function hasEventListener(type:String):Boolean {
+			return cl_dispatcher.hasEventListener(type);
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function removeEventListener(type:String, listener:Function, useCapture:Boolean = false):void {
+			cl_dispatcher.removeEventListener(type, listener, useCapture);
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function willTrigger(type:String):Boolean {
+			return cl_dispatcher.willTrigger(type);
+		}
+		
 		[Inline]
-		private function getAuthoritativeContainerState(container:IContainer):Boolean {
-			return cl_treeResolver.findRootContainer(container).containerState	
+		private function isForeignContainer(container:IContainer):Boolean {
+			return !(container in dct_foreignCounter)
+		}
+		
+		[Inline]
+		private function isForeignPanel(panel:IPanel):Boolean {
+			return !(panel in dct_foreignCounter)
 		}
 		
 		[Inline]
@@ -1264,23 +1786,57 @@ package airdock
 			return (crossDockingPolicy & flag) != 0;
 		}
 		
-		public static function create(options:DockConfig):ICustomizableDocker
+		/**
+		 * Gets the authoritative state of the container, by querying the root container's state.
+		 * If the root container is a parked container, then it is most likely DOCKED; 
+		 * otherwise, it is most likely INTEGRATED (assuming no changes have been made manually to the state)
+		 * @param	container	The container to get the authoritative state of.
+		 * @return	The authoritative state of the container.
+		 * @see	airdock.enums.PanelContainerState
+		 */
+		[Inline]
+		private function getAuthoritativeContainerState(container:IContainer):Boolean
 		{
-			if (!(options && options.mainContainer && options.defaultWindowOptions && options.treeResolver))
+			var root:IContainer = cl_treeResolver.findRootContainer(container)
+			return root && root.containerState	
+		}
+		
+		/**
+		 * Checks whether AIRDock is supported on the target runtime or not.
+		 * Use this method to determine whether AIRDock is supported on the target runtime before creating an instance via the create() method.
+		 * However, in general, any system which supports both the NativeWindow and NativeDragManager class will support AIRDock as well.
+		 * @see #create()
+		 */
+		public static function get isSupported():Boolean {
+			return NativeWindow.isSupported && NativeDragManager.isSupported;
+		}
+		
+		/**
+		 * Creates an AIRDock instance, based on the supplied configuration, if supported. To check whether it is supported, see the static isSupported() method.
+		 * It is advised to use this method to create a new AIRDock instance rather than creating it via the new() operator.
+		 * @param	config	A DockConfig instance representing the configuration options that must be used when creating the new AIRDock instance.
+		 * @throws	ArgumentError If either the configuration is null, or any of the mainContainer, defaultWindowOptions, or treeResolver attributes are null in the configuration.
+		 * @throws	IllegalOperationError If AIRDock is not supported on the target system. To check whether it is supported, see the static isSupported() method.
+		 * @return	An AIRDock instance as an ICustomizableDocker.
+		 * @see	#isSupported
+		 */
+		public static function create(config:DockConfig):ICustomizableDocker
+		{
+			if (!(config && config.mainContainer && config.defaultWindowOptions && config.treeResolver))
 			{
 				var reason:String = "Invalid options: "
-				if(!options) {
+				if(!config) {
 					reason += "Options must be non-null."
 				}
 				else 
 				{
-					if(!options.mainContainer) {
+					if(!config.mainContainer) {
 						reason += "Option mainContainer must be a non-null value. ";
 					}
-					if(!options.defaultWindowOptions) {
+					if(!config.defaultWindowOptions) {
 						reason += "Option defaultWindowOptions must be a non-null value. ";
 					}
-					if(!options.treeResolver) {
+					if(!config.treeResolver) {
 						reason += "Option treeResolver must be a non-null value. ";
 					}
 				}
@@ -1290,39 +1846,41 @@ package airdock
 				throw new IllegalOperationError("Error: AIRDock is not supported on the current system.");
 			}
 			var dock:AIRDock = new AIRDock()
-			dock.setPanelFactory(options.panelFactory)
-			dock.setPanelListFactory(options.panelListFactory)
-			dock.setContainerFactory(options.containerFactory)
-			dock.defaultWindowOptions = options.defaultWindowOptions
-			dock.defaultContainerOptions = options.defaultContainerOptions
-			dock.crossDockingPolicy = options.crossDockingPolicy
-			dock.mainContainer = options.mainContainer
-			dock.treeResolver = options.treeResolver
-			dock.resizeHelper = options.resizeHelper
-			dock.dockFormat = options.dockFormat
-			dock.dockHelper = options.dockHelper
+			dock.setPanelFactory(config.panelFactory)
+			dock.setPanelListFactory(config.panelListFactory)
+			dock.setContainerFactory(config.containerFactory)
+			dock.defaultWindowOptions = config.defaultWindowOptions
+			dock.defaultContainerOptions = config.defaultContainerOptions
+			dock.crossDockingPolicy = config.crossDockingPolicy
+			dock.mainContainer = config.mainContainer
+			dock.treeResolver = config.treeResolver
+			dock.resizeHelper = config.resizeHelper
+			dock.dockFormat = config.dockFormat
+			dock.dockHelper = config.dockHelper
 			if (dock.mainContainer.stage) {
 				dock.defaultWindowOptions.owner = dock.mainContainer.stage.nativeWindow
 			}
-			if (!(isNaN(options.dragImageWidth) || isNaN(options.dragImageHeight)))
+			if (!(isNaN(config.dragImageWidth) || isNaN(config.dragImageHeight)))
 			{
-				dock.dragImageHeight = options.dragImageHeight
-				dock.dragImageWidth = options.dragImageWidth
+				dock.dragImageHeight = config.dragImageHeight
+				dock.dragImageWidth = config.dragImageWidth
 			}
 			return dock as ICustomizableDocker
 		}
-		
 	}
 	
 }
 
 import airdock.interfaces.docking.IContainer;
 import flash.display.Stage;
+import flash.geom.Point;
 internal class DragInformation
 {
 	private var st_dragStage:Stage;
 	private var num_localX:Number;
 	private var num_localY:Number;
+	private var num_stageX:Number;
+	private var num_stageY:Number;
 	public function DragInformation(stage:Stage, localX:Number, localY:Number)
 	{
 		st_dragStage = stage;
@@ -1330,20 +1888,56 @@ internal class DragInformation
 		num_localY = localY;
 	}
 	
+	public function convertToScreen():Point {
+		return dragStage.nativeWindow.globalToScreen(new Point(num_stageX, num_stageY))
+	}
+	
+	public function updateStageCoordinates(stageX:Number, stageY:Number):void 
+	{
+		num_stageX = stageX;
+		num_stageY = stageY;
+	}
+	
 	public function get dragStage():Stage {
 		return st_dragStage;
 	}
 	
+	/**
+	 * Stored initial property relative to container.
+	 */
 	public function get localX():Number {
 		return num_localX;
 	}
 	
+	/**
+	 * Stored initial property relative to container.
+	 */
 	public function get localY():Number {
 		return num_localY;
 	}
+	
+	public function get stageX():Number {
+		return num_stageX;
+	}
+	
+	public function get stageY():Number {
+		return num_stageY;
+	}
 }
 
-internal class PanelStateInformation
+internal interface IReadablePanelStateInformation
+{
+	function get previousRoot():IContainer;
+	function get integratedCode():String
+}
+
+internal interface IWritablePanelStateInformation
+{
+	function set previousRoot(value:IContainer):void
+	function set integratedCode(value:String):void;
+}
+
+internal class PanelStateInformation implements IReadablePanelStateInformation, IWritablePanelStateInformation
 {
 	private var str_integratedCode:String;
 	private var plc_prevRoot:IContainer;

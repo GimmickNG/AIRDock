@@ -2,6 +2,7 @@ package airdock.enums
 {
 	import airdock.config.ContainerConfig;
 	import airdock.config.DockConfig;
+	import airdock.config.PanelConfig;
 	import airdock.impl.DefaultDockFormat;
 	import airdock.impl.DefaultMultiFactory;
 	import airdock.impl.DefaultTreeResolver;
@@ -18,8 +19,10 @@ package airdock.enums
 	import flash.display.NativeWindowInitOptions;
 	import flash.display.NativeWindowSystemChrome;
 	import flash.display.NativeWindowType;
+	import flash.display.Stage;
+	
 	/**
-	 * ...
+	 * The default settings for a Docker. It is advised to use this in order to meet most (basic) use cases.
 	 * @author Gimmick
 	 */
 	public final class DockDefaults 
@@ -32,10 +35,13 @@ package airdock.enums
 		public static const PANEL_FACTORY:Class = DefaultMultiFactory
 		public static const RESIZER:Class = DefaultResizer
 		
-		public function DockDefaults() {
-			
-		}
+		public function DockDefaults() { }
 		
+		/**
+		 * Creates the default options for a Docker instance.
+		 * @param	mainContainer	The main container to which the Docker is to be attached to.
+		 * @return	A DockConfig instance representing the set of (default) options for the Docker.
+		 */
 		public static function createDefaultOptions(mainContainer:DisplayObjectContainer):DockConfig
 		{
 			var options:DockConfig = new DockConfig()
@@ -58,6 +64,34 @@ package airdock.enums
 			options.defaultWindowOptions = nativeWindowOptions
 			return options
 		}
+		
+		public static function createDefaultContainerConfig(container:DisplayObjectContainer):ContainerConfig
+		{
+			var config:ContainerConfig = new ContainerConfig()
+			var width:Number, height:Number;
+			if (container is Stage)
+			{
+				width = (container as Stage).stageWidth;
+				height = (container as Stage).stageHeight;
+			}
+			else
+			{
+				height = container.height;
+				width = container.width;
+			}
+			config.height = height;
+			config.width = width;
+			return config;
+		}
+		
+		public static function createDefaultPanelConfig(container:DisplayObjectContainer):PanelConfig
+		{
+			var config:PanelConfig = new PanelConfig()
+			config.dockable = config.resizable = true;
+			config.color = Math.random() * 0xFFFFFFFF;
+			config.height = container.height;
+			config.width = container.width;
+			return config;
+		}
 	}
-
 }

@@ -11,12 +11,22 @@ package airdock.impl.ui
 	import flash.events.NativeDragEvent;
 
 	/**
-	 * ...
+	 * Dispatched when the user has dropped the panel or container onto the dock target, and the Docker is to decide what action to take.
+	 * @eventType airdock.events.DockEvent.DRAG_COMPLETING
+	 */
+	[Event(name="deDragCompleting", type="airdock.events.DockEvent")]
+	
+	/**
+	 * Default IDockHelper implementation. 
+	 * 
+	 * Provides a cross-shaped interface which allows the user to integrate panels or containers onto the left, right, top and bottom.
+	 * 
 	 * @author Gimmick
+	 * @see airdock.interfaces.ui.IDockHelper
 	 */
 	public class DefaultDockHelper extends Sprite implements IDockHelper
 	{
-		private var spr_centerShape:Sprite
+		private var spr_centerShape:Sprite;
 		private var spr_leftShape:Sprite;
 		private var spr_rightShape:Sprite;
 		private var spr_topShape:Sprite;
@@ -39,8 +49,11 @@ package airdock.impl.ui
 			addEventListener(NativeDragEvent.NATIVE_DRAG_OVER, displayDockHandlesOnDrag, false, 0, true)
 		}
 		
+		/**
+		 * Dispatches a DockEvent when the user has dropped the panel or container on any of the sprites of this object, prior to the end of the drag-dock action.
+		 */
 		private function acceptDragDrop(evt:NativeDragEvent):void {
-			dispatchEvent(new DockEvent(DockEvent.DRAG_COMPLETED, evt.clipboard, evt.target as DisplayObject, true, false))
+			dispatchEvent(new DockEvent(DockEvent.DRAG_COMPLETING, evt.clipboard, evt.target as DisplayObject, true, true))
 		}
 		
 		private function displayDockHandlesOnDrag(evt:NativeDragEvent):void 
@@ -52,6 +65,9 @@ package airdock.impl.ui
 			NativeDragManager.acceptDragDrop(currentTarget)
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function getSideFrom(dropTarget:DisplayObject):int
 		{
 			switch(dropTarget)
@@ -70,18 +86,27 @@ package airdock.impl.ui
 			}
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function hideAll():void {
 			spr_centerShape.alpha = spr_leftShape.alpha = spr_rightShape.alpha = spr_bottomShape.alpha = spr_topShape.alpha = 0
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function showAll():void {
 			spr_centerShape.alpha = spr_leftShape.alpha = spr_rightShape.alpha = spr_bottomShape.alpha = spr_topShape.alpha = 1
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function draw(width:Number, height:Number):void
 		{
 			var currGraphics:Graphics;
-			var squareSize:Number = width / 3
+			var squareSize:Number = (width + height) / 6
 			currGraphics = spr_centerShape.graphics
 			currGraphics.clear()
 			currGraphics.beginFill(0, 1)
@@ -113,10 +138,16 @@ package airdock.impl.ui
 			currGraphics.endFill()
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function getDefaultWidth():Number {
 			return 64.0
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function getDefaultHeight():Number {
 			return 64.0
 		}

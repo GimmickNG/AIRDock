@@ -1,7 +1,9 @@
 package airdock.config 
 {
 	/**
-	 * ...
+	 * Base configuration class for creating a container.
+	 * The width and height parameters are the minimum required parameters for creating the container; 
+	 * additional parameters can be added for extra customizability.
 	 * @author Gimmick
 	 */
 	public class ContainerConfig extends Object
@@ -25,7 +27,5 @@ package airdock.config
 		public function set height(value:Number):void {
 			num_height = value;
 		}
-		
 	}
-
 }

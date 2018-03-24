@@ -6,14 +6,23 @@ package airdock.impl
 	import airdock.interfaces.docking.ITreeResolver;
 	import flash.display.DisplayObject;
 	import flash.display.DisplayObjectContainer;
+	
 	/**
-	 * ...
+	 * Default ITreeResolver implementation. 
+	 * 
+	 * Uses the implicit display list to resolve the relationships between containers and other display objects; 
+	 * an alternate implementation may involve using explicit parent references in IContainers for use by the resolver.
+	 * 
 	 * @author Gimmick
+	 * @see	airdock.interfaces.docking.ITreeResolver
 	 */
 	public final class DefaultTreeResolver implements ITreeResolver
 	{
 		public function DefaultTreeResolver() { }
 		
+		/**
+		 * @inheritDoc
+		 */
 		[Inline]
 		public function findRootContainer(container:IContainer):IContainer
 		{
@@ -27,13 +36,16 @@ package airdock.impl
 			return root;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		[Inline]
-		public function findParentContainer(displayObj:DisplayObject):IContainer
+		public function findParentContainer(displayObject:DisplayObject):IContainer
 		{
 			var currParent:DisplayObjectContainer
-			if (displayObj)
+			if (displayObject)
 			{
-				currParent = displayObj.parent
+				currParent = displayObject.parent
 				while (currParent && !(currParent is IContainer)) {
 					currParent = currParent.parent
 				}
@@ -41,16 +53,19 @@ package airdock.impl
 			return currParent as IContainer
 		}
 		
-		public function serializeCode(targetContainerSpace:IContainer, displayObj:DisplayObject):String
+		/**
+		 * @inheritDoc
+		 */
+		public function serializeCode(targetContainerSpace:IContainer, displayObject:DisplayObject):String
 		{
 			const STRING_FILL:String = PanelContainerSide.STRING_FILL;
-			if(!(targetContainerSpace && displayObj)) {
+			if(!(targetContainerSpace && displayObject)) {
 				return null;
 			}
-			else if(targetContainerSpace == displayObj) {
+			else if(targetContainerSpace == displayObject) {
 				return STRING_FILL;
 			}
-			else for (var child:DisplayObject = displayObj; child && child != targetContainerSpace; child = child.parent) { }
+			else for (var child:DisplayObject = displayObject; child && child != targetContainerSpace; child = child.parent) { }
 			if(!child) {
 				return null;
 			}
@@ -59,20 +74,20 @@ package airdock.impl
 			var parent:IContainer, sideObj:IContainer;
 			var currSide:int, oppSide:int;
 			
-			for (parent = findParentContainer(displayObj); parent; parent = findParentContainer(parent as DisplayObject))
+			for (parent = findParentContainer(displayObject); parent; parent = findParentContainer(parent as DisplayObject))
 			{
 				if (parent.hasSides)
 				{
-					currSide = parent.currentSideCode
+					currSide = parent.sideCode
 					sideObj = parent.getSide(currSide)
-					if(sideObj && sideObj.contains(displayObj)) {
+					if(sideObj && sideObj.contains(displayObject)) {
 						resultArr.push(SIDE_TO_STRING[currSide])
 					}
 					else
 					{
 						currSide = PanelContainerSide.getComplementary(currSide)
 						sideObj = parent.getSide(currSide)
-						if(sideObj && sideObj.contains(displayObj)) {
+						if(sideObj && sideObj.contains(displayObject)) {
 							resultArr.push(SIDE_TO_STRING[currSide])
 						}
 					}
@@ -89,31 +104,34 @@ package airdock.impl
 			return resultArr.reverse().join('');
 		}
 		
-		public function findCommonParent(displayObj:DisplayObjectContainer, otherDisplayObj:DisplayObjectContainer):DisplayObjectContainer
+		/**
+		 * @inheritDoc
+		 */
+		public function findCommonParent(displayObject:DisplayObject, otherDisplayObject:DisplayObject):DisplayObjectContainer
 		{
 			//case 1: otherDisplayObj is a parent of displayObj
-			var temp:DisplayObject = displayObj
-			while(temp && temp != otherDisplayObj) {
+			var temp:DisplayObjectContainer = displayObject as DisplayObjectContainer
+			while(temp && temp != otherDisplayObject) {
 				temp = temp.parent
 			}
-			if(temp == otherDisplayObj) {
-				return otherDisplayObj
+			if(temp == otherDisplayObject) {
+				return temp
 			}
 			//case 2: displayObj is a parent of otherDisplayObj
-			temp = otherDisplayObj
-			while(temp && temp != displayObj) {
+			temp = otherDisplayObject as DisplayObjectContainer
+			while(temp && temp != displayObject) {
 				temp = temp.parent
 			}
-			if(temp == displayObj) {
-				return displayObj
+			if(temp == displayObject) {
+				return temp
 			}
 			//case 3: they share a common parent
 			var parent:DisplayObject;
 			var dispDepth:int, otherDispDepth:int;
-			var tempDisp:DisplayObjectContainer = displayObj;
-			var otherTempDisp:DisplayObjectContainer = otherDisplayObj;
-			for (parent = displayObj; parent; parent = findParentContainer(parent) as DisplayObject, ++dispDepth) { }
-			for (parent = otherDisplayObj; parent; parent = findParentContainer(parent) as DisplayObject, ++otherDispDepth) { }
+			var tempDisp:DisplayObjectContainer = displayObject as DisplayObjectContainer;
+			var otherTempDisp:DisplayObjectContainer = otherDisplayObject as DisplayObjectContainer;
+			for (parent = displayObject; parent; parent = findParentContainer(parent) as DisplayObject, ++dispDepth) { }
+			for (parent = otherDisplayObject; parent; parent = findParentContainer(parent) as DisplayObject, ++otherDispDepth) { }
 			while (dispDepth != otherDispDepth)
 			{
 				if (dispDepth > otherDispDepth)

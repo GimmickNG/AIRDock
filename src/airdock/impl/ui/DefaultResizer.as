@@ -10,8 +10,27 @@ package airdock.impl.ui
 	import flash.geom.Rectangle;
 	
 	/**
-	 * ...
-	 * @author Gimmick
+	 * Dispatched when the resizing operation has completed.
+	 * @eventType	flash.events.Event.COMPLETE
+	 */
+	[Event(name = "complete", type = "flash.events.Event")]
+	
+	/**
+	 * Dispatched whenever a resize operation has been applied, i.e. the corresponding container has been resized.
+	 * @eventType	airdock.events.PanelContainerEvent.RESIZED
+	 */
+	[Event(name = "pcContainerResized", type = "airdock.events.PanelContainerEvent")]
+	
+	/**
+	 * Default IResizer implementation.
+	 * 
+	 * Shows a black bar which is either horizontal or vertical whenever a container resize operation 
+	 * is about to take place (i.e. when the user brings the cursor near the edge of the container)
+	 * 
+	 * Also shows the side which is going to be resized.
+	 * 
+	 * @author	Gimmick
+	 * @see	airdock.interfaces.ui.IResizer
 	 */
 	public class DefaultResizer extends Sprite implements IResizer
 	{
@@ -27,6 +46,7 @@ package airdock.impl.ui
 			rect_orientation = new Rectangle()
 			addEventListener(MouseEvent.MOUSE_DOWN, startResize, false, 0, true)
 		}
+		
 		private function startResize(evt:MouseEvent):void 
 		{
 			removeEventListener(MouseEvent.MOUSE_DOWN, startResize)
@@ -71,19 +91,31 @@ package airdock.impl.ui
 			dispatchEvent(new PanelContainerEvent(PanelContainerEvent.RESIZED, null, plc_dragContainer, false, false))
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function get isDragging():Boolean {
 			return b_dragging
 		}
 		
-		public function setContainer(container:IContainer):void {
+		/**
+		 * @inheritDoc
+		 */
+		public function set container(container:IContainer):void {
 			plc_dragContainer = container
 		}
 		
-		public function getContainer():IContainer {
+		/**
+		 * @inheritDoc
+		 */
+		public function get container():IContainer {
 			return plc_dragContainer
 		}
 		
-		public function setSideCode(sideCode:int):void
+		/**
+		 * @inheritDoc
+		 */
+		public function set sideCode(sideCode:int):void
 		{
 			if (PanelContainerSide.isComplementary(PanelContainerSide.LEFT, sideCode)) {	//horizontal
 				rect_orientation.setTo(x, rect_maxSize.y, 4, rect_maxSize.height)
@@ -94,26 +126,57 @@ package airdock.impl.ui
 			graphics.clear()
 			graphics.beginFill(0, 1)
 			graphics.drawRect(0, 0, rect_orientation.width, rect_orientation.height)
+			var tempSideCode:int = sideCode
+			switch(tempSideCode)
+			{
+				case PanelContainerSide.LEFT:
+					graphics.drawRect(rect_orientation.width, ((rect_orientation.height * 0.5) - 8), 8, 16);
+					break;
+				case PanelContainerSide.RIGHT:
+					graphics.drawRect(-8, ((rect_orientation.height * 0.5) - 8), 8, 16);
+					break;
+				case PanelContainerSide.TOP:
+					graphics.drawRect(((rect_orientation.width * 0.5) - 8), rect_orientation.height, 16, 8);
+					break;
+				case PanelContainerSide.BOTTOM:
+					graphics.drawRect(((rect_orientation.width * 0.5) - 8), -8, 16, 8);
+					break;	
+			}
 			graphics.endFill()
 			i_sideCode = sideCode
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function set maxSize(size:Rectangle):void {
 			rect_maxSize.copyFrom(size)
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function get preferredXPercentage():Number {
 			return 0
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function get preferredYPercentage():Number {
 			return 0
 		}
 		
-		public function getSideCode():int {
+		/**
+		 * @inheritDoc
+		 */
+		public function get sideCode():int {
 			return i_sideCode
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
 		public function get tolerance():Number {
 			return 0.05
 		}	
