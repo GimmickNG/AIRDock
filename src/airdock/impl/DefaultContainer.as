@@ -152,9 +152,7 @@ package airdock.impl
 				otherSide.flattenContainer()
 				currentSide.flattenContainer()
 				otherSide.mergeIntoContainer(this)
-				//this may not be necessary since otherSide will anyways have side FILL and no subcontainers
-				//keep it just in case?
-				setContainers(PanelContainerSide.FILL, null, null)
+				setContainers(PanelContainerSide.FILL, null, null)	//this may not be necessary since otherSide will anyways have side FILL and no subcontainers; keep it just in case?
 			}
 			return canFlatten
 		}

@@ -1,5 +1,6 @@
 package airdock.impl.ui
 {
+	import airdock.delegates.PanelListDelegate;
 	import airdock.enums.PanelContainerSide;
 	import airdock.events.DockEvent;
 	import airdock.events.PanelContainerEvent;
@@ -69,10 +70,10 @@ package airdock.impl.ui
 		private var num_maxWidth:Number;
 		private var num_maxHeight:Number;
 		private var tf_panelName:TextField;
-		private var vec_panels:Vector.<IPanel>;
 		private var vec_tabs:Vector.<PanelTab>;
 		private var pt_preferredLocation:Point;
 		private var rect_visibleRegion:Rectangle;
+		private var cl_listDelegate:PanelListDelegate;
 		public function DefaultPanelList() 
 		{
 			super();
@@ -83,12 +84,12 @@ package airdock.impl.ui
 			addChild(tf_panelName)
 			
 			vec_tabs = new Vector.<PanelTab>();
-			vec_panels = new Vector.<IPanel>();
 			pt_preferredLocation = new Point();
 			rect_visibleRegion = new Rectangle();
 			setColors(ACTIVATED_COLOR, DEACTIVATED_COLOR);
+			cl_listDelegate = new PanelListDelegate(this);
 			
-			redraw(100, 100)
+			redraw(100, 100);
 			addEventListener(MouseEvent.CLICK, dispatchShowPanel, false, 0, true)
 			addEventListener(MouseEvent.DOUBLE_CLICK, dispatchDock, false, 0, true);
 			addEventListener(MouseEvent.MOUSE_DOWN, startDispatchDrag, false, 0, true);
@@ -112,7 +113,7 @@ package airdock.impl.ui
 		
 		private function startDispatchDrag(evt:MouseEvent):void 
 		{
-			if (evt.target is PanelTab && !vec_panels[vec_tabs.indexOf(evt.target as PanelTab)].dockable) {
+			if (evt.target is PanelTab && !cl_listDelegate.getPanelAt(vec_tabs.indexOf(evt.target as PanelTab)).dockable) {
 				return;
 			}
 			removeEventListener(MouseEvent.MOUSE_DOWN, startDispatchDrag)
@@ -124,9 +125,8 @@ package airdock.impl.ui
 		{
 			var panel:IPanel;
 			if (evt.target is PanelTab) {
-				panel = vec_panels[vec_tabs.indexOf(evt.target as PanelTab)];
+				panel = cl_listDelegate.getPanelAt(vec_tabs.indexOf(evt.target as PanelTab));
 			}
-			//it happens here the changing of panels
 			dispatchEvent(new PanelContainerEvent(PanelContainerEvent.DRAG_REQUESTED, panel, null, true, false))
 			evt.stopImmediatePropagation()
 			stopDispatchDrag(evt)
@@ -162,17 +162,17 @@ package airdock.impl.ui
 		 */
 		public function addPanelAt(panel:IPanel, index:int):void
 		{
+			var tab:PanelTab;
 			if(!panel) {
 				return;
 			}
-			var tab:PanelTab = new PanelTab()
+			cl_listDelegate.addPanelAt(panel, index)
+			tab = new PanelTab()
 			tab.activatedColor = u_activatedColor
 			tab.deactivatedColor = u_deactivatedColor
 			tab.setTabName(panel.panelName)
 			tab.doubleClickEnabled = true
 			vec_tabs.splice(index, 0, tab)
-			vec_panels.splice(index, 0, panel)
-			
 			tab.activate()
 			showPanel(panel)
 			redraw(width, height)
@@ -182,7 +182,7 @@ package airdock.impl.ui
 		 * @inheritDoc
 		 */
 		public function addPanel(panel:IPanel):void {
-			addPanelAt(panel, vec_panels.length)
+			addPanelAt(panel, cl_listDelegate.numPanels)
 		}
 		
 		/**
@@ -190,12 +190,12 @@ package airdock.impl.ui
 		 */
 		public function updatePanel(panel:IPanel):void
 		{
-			var index:int = vec_panels.indexOf(panel);
-			if(index == -1) {
-				return;
+			var index:int = cl_listDelegate.getPanelIndex(panel);
+			if (index != -1)
+			{
+				vec_tabs[index].setTabName(panel.panelName);
+				redraw(width, height)
 			}
-			vec_tabs[index].setTabName(panel.panelName);
-			redraw(width, height)
 		}
 		
 		private function dispatchShowPanel(evt:MouseEvent):void
@@ -203,9 +203,8 @@ package airdock.impl.ui
 			if(!(evt.target is PanelTab)) {
 				return;
 			}
-			var index:int = vec_tabs.indexOf(evt.target as PanelTab)
-			var panel:IPanel = vec_panels[index];
-			if(dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SHOW_REQUESTED, panel, null, true, true))) {
+			var panel:IPanel = cl_listDelegate.getPanelAt(vec_tabs.indexOf(evt.target as PanelTab));
+			if(cl_listDelegate.requestShow(panel)) {
 				showPanel(panel)
 			}
 		}
@@ -214,13 +213,14 @@ package airdock.impl.ui
 		{
 			var panel:IPanel;
 			if (evt.target is PanelTab) {
-				panel = vec_panels[vec_tabs.indexOf(evt.target as PanelTab)];
+				panel = cl_listDelegate.getPanelAt(vec_tabs.indexOf(evt.target as PanelTab));
 			}
+			//panel is null -> entire container; if panel is not null, check if it's dockable beforehand
 			if (panel && !panel.dockable) {
 				return;
 			}
 			evt.stopImmediatePropagation()
-			dispatchEvent(new PanelContainerEvent(PanelContainerEvent.STATE_TOGGLE_REQUESTED, panel, null, true, true))
+			cl_listDelegate.requestStateToggle(panel)
 		}
 		
 		private function redraw(width:Number, height:Number):void 
@@ -267,7 +267,7 @@ package airdock.impl.ui
 			if(tab.parent == this) {
 				removeChild(tab)
 			}
-			vec_panels.splice(index, 1)
+			cl_listDelegate.removePanelAt(index)
 			redraw(width, height)
 		}
 		
@@ -276,11 +276,10 @@ package airdock.impl.ui
 		 */
 		public function removePanel(panel:IPanel):void 
 		{
-			var index:int = vec_panels.indexOf(panel)
-			if(index == -1) {
-				return;
+			var index:int = cl_listDelegate.getPanelIndex(panel)
+			if(index != -1) {
+				removePanelAt(index)
 			}
-			removePanelAt(index)
 		}
 		
 		/**
@@ -288,21 +287,15 @@ package airdock.impl.ui
 		 */
 		public function showPanel(panel:IPanel):void 
 		{
-			var index:int = vec_panels.indexOf(panel)
-			if(index == -1) {
-				return;
+			var index:int = cl_listDelegate.getPanelIndex(panel)
+			if (index != -1)
+			{
+				for (var i:uint = 0; i < vec_tabs.length; ++i) {
+					vec_tabs[i].deactivate()
+				}
+				vec_tabs[index].activate()
+				tf_panelName.text = panel.panelName || "";
 			}
-			var tab:PanelTab = vec_tabs[index];
-			for (var i:uint = 0; i < vec_tabs.length; ++i) {
-				vec_tabs[i].deactivate()
-			}
-			tab.activate()
-			
-			var panelName:String = vec_panels[index].panelName
-			if(!panelName) {
-				panelName = "";
-			}
-			tf_panelName.text = panelName
 		}
 		
 		/**
