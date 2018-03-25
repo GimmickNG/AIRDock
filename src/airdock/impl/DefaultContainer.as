@@ -63,27 +63,27 @@ package airdock.impl
 	{
 		private var i_currSide:int;
 		private var num_sideSize:Number;
-		private var num_minSideSize:Number;
-		private var num_maxSideSize:Number;
 		private var num_maxWidth:Number;
 		private var num_maxHeight:Number;
+		private var num_minSideSize:Number;
+		private var num_maxSideSize:Number;
 		private var cl_panelList:IPanelList;
 		private var b_containerState:Boolean;
 		private var plc_otherSide:IContainer;
 		private var plc_currentSide:IContainer;
-		private var vec_panels:Vector.<IPanel>
+		private var vec_panels:Vector.<IPanel>;
 		public function DefaultContainer()
 		{
 			addEventListener(PanelPropertyChangeEvent.PROPERTY_CHANGED, updatePanelBar, false, 0, true)
 			i_currSide = PanelContainerSide.FILL;
 			vec_panels = new Vector.<IPanel>();
-			num_maxWidth = num_maxHeight = 128
+			num_maxWidth = num_maxHeight = 128;
 			otherSide = currentSide = null;
-			addChildUpdateListeners()
-			sideSize = 0.5;
-			panelList = null;
+			addChildUpdateListeners();
+			maxSideSize = 1 - (1e-5);
 			minSideSize = 0.0;
-			maxSideSize = 0.999999;
+			panelList = null;
+			sideSize = 0.5;
 		}
 		
 		private function addChildUpdateListeners():void
@@ -111,7 +111,7 @@ package airdock.impl
 		private function updatePanelBar(evt:PanelPropertyChangeEvent):void 
 		{
 			var currPanel:IPanel = evt.target as IPanel
-			if (evt.fieldName == "panelName" && currPanel && evt.eventPhase == EventPhase.BUBBLING_PHASE && currPanel.parent == this) {
+			if (currPanel && currPanel.parent == this && evt.eventPhase == EventPhase.BUBBLING_PHASE) {
 				cl_panelList.updatePanel(currPanel)
 			}
 		}
@@ -689,10 +689,8 @@ package airdock.impl
 			var sideContainer:IContainer = getSide(side)	//get: FILL (this) or side (child container)
 			if (sideContainer && sideContainer.hasSides == container.hasSides && sideContainer.sideCode == container.sideCode)
 			{
-				//merge if there are no sides for this current container
-				//or this container has a side equal to the side supplied
-				container.mergeIntoContainer(sideContainer)
-				retCon = sideContainer
+				container.mergeIntoContainer(sideContainer)	//merge if there are no sides for this current container
+				retCon = sideContainer						//or this container has a side equal to the side supplied
 			}
 			else
 			{

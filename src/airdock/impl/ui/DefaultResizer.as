@@ -8,6 +8,8 @@ package airdock.impl.ui
 	import flash.events.Event;
 	import flash.events.MouseEvent;
 	import flash.geom.Rectangle;
+	import flash.ui.Mouse;
+	import flash.ui.MouseCursor;
 	
 	/**
 	 * Dispatched when the resizing operation has completed.
@@ -36,7 +38,8 @@ package airdock.impl.ui
 	{
 		private var i_sideCode:int;
 		private var b_dragging:Boolean;
-		private var rect_maxSize:Rectangle
+		private var str_prevCursor:String;
+		private var rect_maxSize:Rectangle;
 		private var rect_orientation:Rectangle
 		private var plc_dragContainer:IContainer;
 		public function DefaultResizer()
@@ -47,15 +50,21 @@ package airdock.impl.ui
 			addEventListener(MouseEvent.MOUSE_DOWN, startResize, false, 0, true)
 		}
 		
+		private function setCursorOnEvent(evt:MouseEvent):void {
+			Mouse.cursor = str_prevCursor;
+		}
+		
 		private function startResize(evt:MouseEvent):void 
 		{
-			removeEventListener(MouseEvent.MOUSE_DOWN, startResize)
 			b_dragging = true
+			str_prevCursor = Mouse.cursor
+			Mouse.cursor = MouseCursor.HAND
 			if (stage)
 			{
 				stage.addEventListener(MouseEvent.MOUSE_MOVE, dispatchResize, false, 0, true)
 				stage.addEventListener(MouseEvent.MOUSE_UP, stopResize, false, 0, true)
 			}
+			removeEventListener(MouseEvent.MOUSE_DOWN, startResize)
 		}
 		
 		private function stopResize(evt:MouseEvent):void 
@@ -69,6 +78,7 @@ package airdock.impl.ui
 				stage.removeEventListener(MouseEvent.MOUSE_MOVE, dispatchResize)
 				stage.removeEventListener(MouseEvent.MOUSE_UP, stopResize)
 			}
+			Mouse.cursor = str_prevCursor
 			dispatchEvent(new Event(Event.COMPLETE, false, false))
 			addEventListener(MouseEvent.MOUSE_DOWN, startResize, false, 0, true)
 		}

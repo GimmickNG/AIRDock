@@ -1,5 +1,6 @@
 package airdock.impl 
 {
+	import airdock.delegates.PanelDelegate;
 	import airdock.enums.PanelContainerState;
 	import airdock.events.PanelPropertyChangeEvent;
 	import airdock.interfaces.docking.IPanel;
@@ -36,23 +37,26 @@ package airdock.impl
 		private var b_dockable:Boolean
 		private var b_resizable:Boolean
 		private var str_panelName:String
-		public function DefaultPanel() {
+		private var cl_panelDelegate:PanelDelegate
+		public function DefaultPanel()
+		{
 			super();
+			cl_panelDelegate = new PanelDelegate(this)
 		}
 		
 		public function draw(color:uint, width:int, height:int):void
 		{
 			var prevWidth:Number = this.width
 			var prevHeight:Number = this.height
-			if((prevWidth != width && !dispatchEvent(new PanelPropertyChangeEvent(PanelPropertyChangeEvent.PROPERTY_CHANGING, "width", prevWidth, width, true, true))) || (prevHeight != height && !dispatchEvent(new PanelPropertyChangeEvent(PanelPropertyChangeEvent.PROPERTY_CHANGING, "height", prevHeight, height, true, true)))) {
+			if((prevWidth != width && !cl_panelDelegate.dispatchChanging("width", prevWidth, width) || (prevHeight != height && !cl_panelDelegate.dispatchChanging("height", prevHeight, height)))) {
 				return;
 			}
 			
-			if (u_color != color && dispatchEvent(new PanelPropertyChangeEvent(PanelPropertyChangeEvent.PROPERTY_CHANGING, "backgroundColor", prevColor, color, true, true)))
+			if (u_color != color && cl_panelDelegate.dispatchChanging("backgroundColor", prevColor, color))
 			{
 				var prevColor:uint = u_color;
 				u_color = color;
-				dispatchEvent(new PanelPropertyChangeEvent(PanelPropertyChangeEvent.PROPERTY_CHANGED, "backgroundColor", prevColor, color, true, false))
+				cl_panelDelegate.dispatchChanged("backgroundColor", prevColor, color)
 			}
 			var colorAlpha:Number = ((color >>> 24) & 0xFF) / 0xFF
 			graphics.clear()
@@ -60,10 +64,10 @@ package airdock.impl
 			graphics.drawRect(0, 0, width, height)
 			graphics.endFill()
 			if (prevWidth != width) {
-				dispatchEvent(new PanelPropertyChangeEvent(PanelPropertyChangeEvent.PROPERTY_CHANGED, "width", prevWidth, width, true, false))
+				cl_panelDelegate.dispatchChanged("width", prevWidth, width)
 			}
 			if (prevHeight != height) {
-				dispatchEvent(new PanelPropertyChangeEvent(PanelPropertyChangeEvent.PROPERTY_CHANGED, "height", prevHeight, height, true, false))
+				cl_panelDelegate.dispatchChanged("height", prevHeight, height)
 			}
 		}
 		
@@ -105,10 +109,10 @@ package airdock.impl
 		public function set panelName(value:String):void
 		{
 			var prevValue:String = str_panelName
-			if (str_panelName != value && dispatchEvent(new PanelPropertyChangeEvent(PanelPropertyChangeEvent.PROPERTY_CHANGING, "panelName", prevValue, value, true, true)))
+			if (str_panelName != value && cl_panelDelegate.dispatchChanging("panelName", prevValue, value))
 			{
 				str_panelName = value;
-				dispatchEvent(new PanelPropertyChangeEvent(PanelPropertyChangeEvent.PROPERTY_CHANGED, "panelName", prevValue, value, true, false))
+				cl_panelDelegate.dispatchChanged("panelName", prevValue, value)
 			}
 		}
 		
@@ -124,10 +128,10 @@ package airdock.impl
 		 */
 		public function set resizable(value:Boolean):void
 		{
-			if (b_resizable != value && dispatchEvent(new PanelPropertyChangeEvent(PanelPropertyChangeEvent.PROPERTY_CHANGING, "resizable", !value, value, true, true)))
+			if (b_resizable != value && cl_panelDelegate.dispatchChanging("resizable", !value, value))
 			{
 				b_resizable = value;
-				dispatchEvent(new PanelPropertyChangeEvent(PanelPropertyChangeEvent.PROPERTY_CHANGED, "resizable", !value, value, true, false))
+				cl_panelDelegate.dispatchChanged("resizable", !value, value)
 			}
 		}
 		
@@ -143,10 +147,10 @@ package airdock.impl
 		 */
 		public function set dockable(value:Boolean):void
 		{
-			if (b_dockable != value) 
+			if (b_dockable != value && cl_panelDelegate.dispatchChanging("dockable", !value, value))
 			{
 				b_dockable = value;
-				dispatchEvent(new PanelPropertyChangeEvent(PanelPropertyChangeEvent.PROPERTY_CHANGED, "dockable", !value, value, true, false))
+				cl_panelDelegate.dispatchChanged("dockable", !value, value)
 			}
 		}
 		
