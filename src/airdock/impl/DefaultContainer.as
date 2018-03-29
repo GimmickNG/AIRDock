@@ -544,7 +544,7 @@ package airdock.impl
 			var swap:Number;
 			var sideX:Number = 0, sideY:Number = 0, sideWidth:Number, sideHeight:Number;
 			var otherSideX:Number, otherSideY:Number, otherSideWidth:Number, otherSideHeight:Number;
-			if (side == PanelContainerSide.LEFT || side == PanelContainerSide.RIGHT)
+			if (PanelContainerSide.isComplementary(side, PanelContainerSide.LEFT))
 			{
 				otherSideHeight = sideHeight = maxHeight;
 				sideWidth = sideSize

@@ -11,23 +11,23 @@ package airdock.enums
 		/**
 		 * Gets the current container.
 		 */
-		public static const FILL:int = 0;		//0000000
+		public static const FILL:int = 0;		//00000000
 		/**
 		 * Gets the left side of the current container. 
 		 */
-		public static const LEFT:int = 1;		//0000001
+		public static const LEFT:int = 1;		//00000001
 		/**
 		 * Gets the right side of the current container. 
 		 */
-		public static const RIGHT:int = 3;		//0000011
+		public static const RIGHT:int = 3;		//00000011
 		/**
 		 * Gets the top side of the current container. 
 		 */
-		public static const TOP:int = 4;		//0000100
+		public static const TOP:int = 4;		//00000100
 		/**
 		 * Gets the bottom side of the current container. 
 		 */
-		public static const BOTTOM:int = 12;	//0001100
+		public static const BOTTOM:int = 12;	//00001100
 		
 		/**
 		 * String representation of FILL.
@@ -80,6 +80,74 @@ package airdock.enums
 		public function PanelContainerSide() { }
 		
 		/**
+		 * Gets an associative array with keys as integers and the values as their string counterparts.
+		 * Useful when calling toString() in a loop, or any place where repeated calls to static methods proves costly.
+		 * @return	An associative array with keys as sides in integer format and the values as their string counterparts.
+		 */
+		[Inline]
+		public static function getIntegerToStringMap():Array {
+			return INT_TO_STRING
+		}
+		
+		/**
+		 * Gets an associative array with strings as integers and the values as their integer counterparts.
+		 * Useful when calling toString() in a loop, or any place where repeated calls to static methods proves costly.
+		 * @return	An associative array with keys as sides in string format and the values as their integer counterparts.
+		 */
+		[Inline]
+		public static function getStringToIntegerMap():Array {
+			return STRING_TO_INT
+		}
+		
+		/**
+		 * Convert a side, in integer format, to a string. Invalid values return STRING_FILL, by default.
+		 * @param	side	The side to get the string representation of, as an integer.
+		 * @return	The string representation of the side, as listed in this enumeration.
+		 */
+		[Inline]
+		public static function toString(side:int):String
+		{
+			switch(side)
+			{
+				case LEFT:
+					return STRING_LEFT;
+				case RIGHT:
+					return STRING_RIGHT;
+				case BOTTOM:
+					return STRING_BOTTOM;
+				case TOP:
+					return STRING_TOP;
+				case FILL:
+				default:
+					return STRING_FILL;	
+			}
+		}
+		
+		/**
+		 * Convert a side, in string format, to an integer. Invalid values return FILL, by default.
+		 * @param	side	The side to get the integer representation of, as a string.
+		 * @return	The integer representation of the side, as listed in this enumeration.
+		 */
+		[Inline]
+		public static function toInteger(side:String):int
+		{
+			switch(side)
+			{
+				case STRING_LEFT:
+					return LEFT;
+				case STRING_RIGHT:
+					return RIGHT;
+				case STRING_TOP:
+					return TOP;
+				case STRING_BOTTOM:
+					return BOTTOM;
+				case STRING_FILL:
+				default:
+					return FILL;	
+			}
+		}
+		
+		/**
 		 * String equivalent of isComplementary(). This also has the capability to handle multiple sides at the same time, and check if all the sides are complementary to each other.
 		 * @param	side	The string representation of the current side(s).
 		 * @param	otherSide	The string representation of the other side(s).
@@ -90,8 +158,11 @@ package airdock.enums
 			if(!(side && otherSide && side.length == otherSide.length)) {
 				return false
 			}
-			else if (side.length == 1) {
-				return (side == STRING_LEFT && otherSide == STRING_RIGHT) || (side == STRING_TOP && otherSide == STRING_BOTTOM) || (side == STRING_FILL && otherSide == STRING_FILL)
+			else if (side.length == 1)
+			{
+				return	(side == STRING_FILL && otherSide == STRING_FILL)	||	(side == STRING_LEFT && otherSide == STRING_RIGHT)	||
+						(otherSide == STRING_LEFT && side == STRING_RIGHT)	||	(side == STRING_TOP && otherSide == STRING_BOTTOM)	||
+						(otherSide == STRING_TOP && side == STRING_BOTTOM)
 			}
 			else
 			{
@@ -141,26 +212,6 @@ package airdock.enums
 		}
 		
 		/**
-		 * Gets an associative array with keys as integers and the values as their string counterparts.
-		 * Useful when calling toString() in a loop, or any place where repeated calls to static methods proves costly.
-		 * @return	An associative array with keys as sides in integer format and the values as their string counterparts.
-		 */
-		[Inline]
-		public static function getIntegerToStringMap():Array {
-			return INT_TO_STRING
-		}
-		
-		/**
-		 * Gets an associative array with strings as integers and the values as their integer counterparts.
-		 * Useful when calling toString() in a loop, or any place where repeated calls to static methods proves costly.
-		 * @return	An associative array with keys as sides in string format and the values as their integer counterparts.
-		 */
-		[Inline]
-		public static function getStringToIntegerMap():Array {
-			return STRING_TO_INT
-		}
-		
-		/**
 		 * Checks whether two sides are equal or complementary. Does not support checking multiple sides at the same time.
 		 * Note: to check whether two sides are exclusively complementary (i.e. not equal), an additional XOR (inequality) check has to be performed.
 		 * @param	side	The first side to compare.
@@ -187,51 +238,45 @@ package airdock.enums
 		}
 		
 		/**
-		 * Convert a side, in integer format, to a string. Invalid values return STRING_FILL, by default.
-		 * @param	side	The side to get the string representation of, as an integer.
-		 * @return	The string representation of the side, as listed in this enumeration.
+		 * String equivalent of isAntiComplementary(). This also has the capability to handle multiple sides at the same time, and check if all the sides are complementary to each other.
+		 * @param	side	The string representation of the current side(s).
+		 * @param	otherSide	The string representation of the other side(s).
+		 * @return	A Boolean indicating whether the two side string(s) are anticomplementary.
 		 */
-		[Inline]
-		public static function toString(side:int):String
+		public static function isAntiComplementaryString(side:String, otherSide:String):Boolean
 		{
-			switch(side)
+			if(!(side && otherSide && side.length == otherSide.length)) {
+				return false
+			}
+			else if (side.length == 1)
 			{
-				case LEFT:
-					return STRING_LEFT;
-				case RIGHT:
-					return STRING_RIGHT;
-				case BOTTOM:
-					return STRING_BOTTOM;
-				case TOP:
-					return STRING_TOP;
-				case FILL:
-				default:
-					return STRING_FILL;	
+				return 	(side == STRING_FILL && otherSide == STRING_FILL)	||	(side == STRING_LEFT && otherSide != STRING_RIGHT)	||
+						(otherSide == STRING_LEFT && side != STRING_RIGHT)	||	(side == STRING_TOP && otherSide != STRING_BOTTOM)	||
+						(otherSide == STRING_TOP && side != STRING_BOTTOM)
+			}
+			else
+			{
+				for (var i:uint = 0; i < side.length; ++i)
+				{
+					if(!isComplementaryString(side.charAt(i), otherSide.charAt(i))) {
+						return false;
+					}
+				}
+				return true;
 			}
 		}
 		
 		/**
-		 * Convert a side, in string format, to an integer. Invalid values return FILL, by default.
-		 * @param	side	The side to get the integer representation of, as a string.
-		 * @return	The integer representation of the side, as listed in this enumeration.
+		 * Checks whether two sides are anticomplementary. Does not support checking multiple sides at the same time.
+		 * Two sides are anticomplementary if they are neither the same or the opposite to each other.
+		 * In effect, it is the result of a boolean NOT on an isComplementary() result.
+		 * @param	side	The first side to compare.
+		 * @param	otherSide	The second side to compare.
+		 * @return	A Boolean indicating whether the supplied sides are equal, or complementary, or neither.
 		 */
 		[Inline]
-		public static function toInteger(side:String):int
-		{
-			switch(side)
-			{
-				case STRING_LEFT:
-					return LEFT;
-				case STRING_RIGHT:
-					return RIGHT;
-				case STRING_TOP:
-					return TOP;
-				case STRING_BOTTOM:
-					return BOTTOM;
-				case STRING_FILL:
-				default:
-					return FILL;	
-			}
+		public static function isAntiComplementary(side:int, otherSide:int):Boolean {
+			return ((side & otherSide) == 0);
 		}
 	}
 

@@ -140,11 +140,13 @@ package airdock.impl.ui
 			else if(PanelContainerSide.isComplementary(PanelContainerSide.TOP, sideCode)) {	//vertical
 				rect_orientation.setTo(rect_maxSize.x, y, rect_maxSize.width, 4)
 			}
+			else {
+				return;
+			}
 			graphics.clear()
 			graphics.beginFill(0, 1)
 			graphics.drawRect(0, 0, rect_orientation.width, rect_orientation.height)
-			var tempSideCode:int = sideCode
-			switch(tempSideCode)
+			switch(sideCode)
 			{
 				case PanelContainerSide.LEFT:
 					graphics.drawRect(rect_orientation.width, ((rect_orientation.height * 0.5) - 8), 8, 16);

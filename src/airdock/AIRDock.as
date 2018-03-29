@@ -117,32 +117,31 @@ package airdock
 		
 		private function resizeNestedContainerOnEvent(evt:PanelContainerEvent):void 
 		{
+			var maxSize:Number, value:Number;
 			var orientation:int = cl_resizer.sideCode
 			var currContainer:IContainer = evt.relatedContainer
 			var position:Point = currContainer.globalToLocal(cl_resizer.localToGlobal(new Point()))
-			var maxSize:Number, value:Number;
-			switch(orientation)
+			if (PanelContainerSide.isComplementary(orientation, PanelContainerSide.LEFT))
 			{
-				case PanelContainerSide.LEFT:
-				case PanelContainerSide.RIGHT:
-					value = position.x
-					maxSize = currContainer.width;
-					break;
-				case PanelContainerSide.TOP:
-				case PanelContainerSide.BOTTOM:
-					value = position.y;
-					maxSize = currContainer.height;
-					break;
-				case PanelContainerSide.FILL:
-				default:
-					return;
+				value = position.x
+				maxSize = currContainer.width;
 			}
+			else if (PanelContainerSide.isComplementary(orientation, PanelContainerSide.TOP))
+			{
+				maxSize = currContainer.height;
+				value = position.y;
+			}
+			else { 
+				return;
+			}
+			
 			if(currContainer.maxSideSize < 1) {
 				maxSize *= currContainer.maxSideSize
 			}
 			else if(maxSize > currContainer.maxSideSize) {
 				maxSize = currContainer.maxSideSize
 			}
+			
 			if (0 < value && value < maxSize) {
 				currContainer.sideSize = value
 			}
@@ -728,7 +727,7 @@ package airdock
 				}
 				
 				point = new Point(targetContainer.x, targetContainer.y)
-				if (side == PanelContainerSide.TOP || side == PanelContainerSide.BOTTOM)
+				if (PanelContainerSide.isComplementary(side, PanelContainerSide.TOP))
 				{
 					point.y += Math.round(localYPercent) * targetContainer.height
 					point.x += cl_resizer.preferredXPercentage * targetContainer.width

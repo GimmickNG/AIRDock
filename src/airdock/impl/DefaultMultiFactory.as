@@ -47,7 +47,7 @@ package airdock.impl
 		 */
 		public function createContainer(options:ContainerConfig):IContainer 
 		{
-			var defaultContainer:DefaultContainer = new DefaultContainer()
+			var defaultContainer:IContainer = new DefaultContainer()
 			defaultContainer.height = options.height
 			defaultContainer.width = options.width
 			return defaultContainer
