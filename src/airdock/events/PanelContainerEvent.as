@@ -40,6 +40,11 @@ package airdock.events
 	[Event(name="pcContainerResized", type="airdock.events.PanelContainerEvent.RESIZED")]
 	
 	/**
+	 * @eventType	airdock.events.PanelContainerEvent.RESIZING
+	 */
+	[Event(name = "pcContainerResizing", type = "airdock.events.PanelContainerEvent.RESIZING")]
+	
+	/**
 	 * @eventType	airdock.events.PanelContainerEvent.CONTAINER_CREATED
 	 */
 	[Event(name="pcContainerCreated", type="airdock.events.PanelContainerEvent.CONTAINER_CREATED")]
@@ -89,9 +94,14 @@ package airdock.events
 		 */
 		public static const RESIZED:String = "pcContainerResized";
 		/**
+		 * The constant used to define a resizing event. Is dispatched whenever a panel or container is going to be resized.
+		 */
+		public static const RESIZING:String = "pcContainerResizing";
+		/**
 		 * The constant used to define a containerCreated event. Is dispatched whenever a container has been automatically created by another container, over the course of its lifetime.
 		 */
 		public static const CONTAINER_CREATED:String = "pcContainerCreated";
+		
 		
 		private var pl_relatedPanel:IPanel;
 		private var plc_relatedContainer:IContainer;

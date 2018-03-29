@@ -111,8 +111,8 @@ package airdock.impl
 		private function updatePanelBar(evt:PanelPropertyChangeEvent):void 
 		{
 			var currPanel:IPanel = evt.target as IPanel
-			if (currPanel && currPanel.parent == this && evt.eventPhase == EventPhase.BUBBLING_PHASE) {
-				cl_panelList.updatePanel(currPanel)
+			if (panelList && currPanel && currPanel.parent == this && evt.eventPhase == EventPhase.BUBBLING_PHASE) {
+				panelList.updatePanel(currPanel)
 			}
 		}
 		

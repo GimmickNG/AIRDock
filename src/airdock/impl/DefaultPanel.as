@@ -34,9 +34,6 @@ package airdock.impl
 	public class DefaultPanel extends Sprite implements IPanel
 	{
 		private var u_color:uint;
-		private var b_dockable:Boolean
-		private var b_resizable:Boolean
-		private var str_panelName:String
 		private var cl_panelDelegate:PanelDelegate
 		public function DefaultPanel()
 		{
@@ -100,58 +97,42 @@ package airdock.impl
 		 * @inheritDoc
 		 */
 		public function get panelName():String {
-			return str_panelName;
+			return cl_panelDelegate.panelName;
 		}
 		
 		/**
 		 * @inheritDoc
 		 */
-		public function set panelName(value:String):void
-		{
-			var prevValue:String = str_panelName
-			if (str_panelName != value && cl_panelDelegate.dispatchChanging("panelName", prevValue, value))
-			{
-				str_panelName = value;
-				cl_panelDelegate.dispatchChanged("panelName", prevValue, value)
-			}
+		public function set panelName(value:String):void {
+			cl_panelDelegate.panelName = value;
 		}
 		
 		/**
 		 * @inheritDoc
 		 */
 		public function get resizable():Boolean {
-			return b_resizable;
+			return cl_panelDelegate.resizable;
 		}
 		
 		/**
 		 * @inheritDoc
 		 */
-		public function set resizable(value:Boolean):void
-		{
-			if (b_resizable != value && cl_panelDelegate.dispatchChanging("resizable", !value, value))
-			{
-				b_resizable = value;
-				cl_panelDelegate.dispatchChanged("resizable", !value, value)
-			}
+		public function set resizable(value:Boolean):void {
+			cl_panelDelegate.resizable = value
 		}
 		
 		/**
 		 * @inheritDoc
 		 */
 		public function get dockable():Boolean {
-			return b_dockable;
+			return cl_panelDelegate.dockable
 		}
 		
 		/**
 		 * @inheritDoc
 		 */
-		public function set dockable(value:Boolean):void
-		{
-			if (b_dockable != value && cl_panelDelegate.dispatchChanging("dockable", !value, value))
-			{
-				b_dockable = value;
-				cl_panelDelegate.dispatchChanged("dockable", !value, value)
-			}
+		public function set dockable(value:Boolean):void {
+			cl_panelDelegate.dockable = value
 		}
 		
 		/**

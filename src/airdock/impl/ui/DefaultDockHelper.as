@@ -1,9 +1,12 @@
 package airdock.impl.ui 
 {
+	import airdock.delegates.DockHelperDelegate;
 	import airdock.enums.PanelContainerSide;
 	import airdock.events.DockEvent;
 	import airdock.interfaces.docking.IDockTarget;
 	import airdock.interfaces.ui.IDockHelper;
+	import airdock.util.IPair;
+	import airdock.util.StaticPair;
 	import flash.desktop.NativeDragManager;
 	import flash.display.DisplayObject;
 	import flash.display.Graphics;
@@ -31,6 +34,7 @@ package airdock.impl.ui
 		private var spr_rightShape:Sprite;
 		private var spr_topShape:Sprite;
 		private var spr_bottomShape:Sprite;
+		private var cl_helperDelegate:DockHelperDelegate;
 		public function DefaultDockHelper() 
 		{
 			spr_leftShape = new Sprite()
@@ -45,59 +49,45 @@ package airdock.impl.ui
 			addChild(spr_bottomShape)
 			addChild(spr_centerShape)
 			
-			addEventListener(NativeDragEvent.NATIVE_DRAG_DROP, acceptDragDrop)
-			addEventListener(NativeDragEvent.NATIVE_DRAG_OVER, displayDockHandlesOnDrag, false, 0, true)
-		}
-		
-		/**
-		 * Dispatches a DockEvent when the user has dropped the panel or container on any of the sprites of this object, prior to the end of the drag-dock action.
-		 */
-		private function acceptDragDrop(evt:NativeDragEvent):void {
-			dispatchEvent(new DockEvent(DockEvent.DRAG_COMPLETING, evt.clipboard, evt.target as DisplayObject, true, true))
-		}
-		
-		private function displayDockHandlesOnDrag(evt:NativeDragEvent):void 
-		{
-			//ignore events that are received by the currently dragging panel
-			var currentTarget:Sprite = evt.target as Sprite
-			hideAll()
-			currentTarget.alpha = 1
-			NativeDragManager.acceptDragDrop(currentTarget)
+			cl_helperDelegate = new DockHelperDelegate(this)
+			cl_helperDelegate.addTargets(new <IPair>[
+				new StaticPair(spr_leftShape, PanelContainerSide.LEFT), new StaticPair(spr_rightShape, PanelContainerSide.RIGHT), 
+				new StaticPair(spr_topShape, PanelContainerSide.TOP), new StaticPair(spr_bottomShape, PanelContainerSide.BOTTOM), new StaticPair(spr_centerShape, PanelContainerSide.FILL)
+			]);
 		}
 		
 		/**
 		 * @inheritDoc
 		 */
-		public function getSideFrom(dropTarget:DisplayObject):int
+		public function getSideFrom(dropTarget:DisplayObject):int {
+			return cl_helperDelegate.getSideFrom(dropTarget);
+		}
+		
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function hide(targets:Vector.<DisplayObject> = null):void
 		{
-			switch(dropTarget)
-			{
-				case spr_bottomShape:
-					return PanelContainerSide.BOTTOM;
-				case spr_topShape:
-					return PanelContainerSide.TOP;
-				case spr_leftShape:
-					return PanelContainerSide.LEFT;
-				case spr_rightShape:
-					return PanelContainerSide.RIGHT;
-				case spr_centerShape:
-				default:
-					return PanelContainerSide.FILL;
+			if (!targets) {
+				spr_centerShape.alpha = spr_leftShape.alpha = spr_rightShape.alpha = spr_bottomShape.alpha = spr_topShape.alpha = 0
+			}
+			else for (var i:uint = 0; i < targets.length; ++i) {
+				targets[i].alpha = 0.0;
 			}
 		}
 		
 		/**
 		 * @inheritDoc
 		 */
-		public function hideAll():void {
-			spr_centerShape.alpha = spr_leftShape.alpha = spr_rightShape.alpha = spr_bottomShape.alpha = spr_topShape.alpha = 0
-		}
-		
-		/**
-		 * @inheritDoc
-		 */
-		public function showAll():void {
-			spr_centerShape.alpha = spr_leftShape.alpha = spr_rightShape.alpha = spr_bottomShape.alpha = spr_topShape.alpha = 1
+		public function show(targets:Vector.<DisplayObject> = null):void
+		{
+			if (!targets) {
+				spr_centerShape.alpha = spr_leftShape.alpha = spr_rightShape.alpha = spr_bottomShape.alpha = spr_topShape.alpha = 1
+			}
+			else for (var i:uint = 0; i < targets.length; ++i) {
+				targets[i].alpha = 1.0;
+			}
 		}
 		
 		/**
@@ -150,6 +140,13 @@ package airdock.impl.ui
 		 */
 		public function getDefaultHeight():Number {
 			return 64.0
+		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function setDockFormat(panelFormat:String, containerFormat:String):void {
+			cl_helperDelegate.setDockFormat(panelFormat, containerFormat)
 		}
 	}
 }

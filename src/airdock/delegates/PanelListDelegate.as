@@ -44,8 +44,12 @@ package airdock.delegates
 			return panel && cl_dispatcher.dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SHOW_REQUESTED, panel, null, true, true))
 		}
 		
+		public function requestDrag(panel:IPanel):Boolean {
+			return dispatchEvent(new PanelContainerEvent(PanelContainerEvent.DRAG_REQUESTED, panel, null, true, false))
+		}
+		
 		public function requestStateToggle(panel:IPanel):Boolean {
-			return cl_dispatcher.dispatchEvent(new PanelContainerEvent(PanelContainerEvent.STATE_TOGGLE_REQUESTED, panel, null, true, true))
+			return dispatchEvent(new PanelContainerEvent(PanelContainerEvent.STATE_TOGGLE_REQUESTED, panel, null, true, true))
 		}
 		
 		public function removePanelAt(index:int):IPanel {
@@ -66,16 +70,16 @@ package airdock.delegates
 			cl_dispatcher.addEventListener(type, listener, useCapture, priority, useWeakReference);
 		}
 		
+		public function removeEventListener(type:String, listener:Function, useCapture:Boolean = false):void {
+			cl_dispatcher.removeEventListener(type, listener, useCapture);
+		}
+		
 		public function dispatchEvent(event:Event):Boolean {
 			return cl_dispatcher.dispatchEvent(event);
 		}
 		
 		public function hasEventListener(type:String):Boolean {
 			return cl_dispatcher.hasEventListener(type);
-		}
-		
-		public function removeEventListener(type:String, listener:Function, useCapture:Boolean = false):void {
-			cl_dispatcher.removeEventListener(type, listener, useCapture);
 		}
 		
 		public function willTrigger(type:String):Boolean {

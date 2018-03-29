@@ -165,7 +165,7 @@ package airdock
 				dispContainer = dispContainer.parent
 			}
 			dockTarget = dispContainer as IDockTarget
-			if (container && isMatchingDockPolicy(crossDockingPolicy, CrossDockingPolicy.REJECT_INCOMING) && isForeignContainer(container)) {
+			if (isMatchingDockPolicy(crossDockingPolicy, CrossDockingPolicy.REJECT_INCOMING) && isForeignContainer(container)) {
 				return;	//ignore if it violates policy - this runs before the DRAG_DROP is cancelled, so prevent normal behavior by exiting early
 			}
 			else if (relatedContainer && dockTarget)
@@ -209,10 +209,11 @@ package airdock
 			if(!(clipBoard.hasFormat(cl_dockFormat.panelFormat) || clipBoard.hasFormat(cl_dockFormat.containerFormat))) {
 				return;
 			}
+			trace("completed", evt.dropAction)
 			var panel:IPanel = clipBoard.getData(cl_dockFormat.panelFormat, ClipboardTransferMode.ORIGINAL_ONLY) as IPanel
 			var container:IContainer = clipBoard.getData(cl_dockFormat.containerFormat, ClipboardTransferMode.ORIGINAL_ONLY) as IContainer
 			if (evt.dropAction != NativeDragActions.NONE || (isForeignContainer(container) && isMatchingDockPolicy(crossDockingPolicy, CrossDockingPolicy.REJECT_INCOMING))) {
-				return;	//return if this is the foreign Docker, i.e. let the originating Docker handle it
+				return;	//return if drop action is valid or if this is the foreign Docker, i.e. let the originating Docker handle it
 			}
 			var window:NativeWindow;
 			if (panel)
@@ -243,16 +244,30 @@ package airdock
 			cl_dragStruct = null;
 		}
 		
+		/**
+		 * Finds and returns all undockable IPanel instances from the given vector of IPanel instances.
+		 * @param	panels	The list of IPanel instances to get the undockable IPanel instances from.
+		 * @return	A new vector of undockable IPanel instances from the supplied list.
+		 */
 		private function filterUndockablePanels(panels:Vector.<IPanel>):Vector.<IPanel>
 		{
-			return panels.filter(function isDockable(item:IPanel, index:int, arr:Vector.<IPanel>):Boolean {
-				return !item.dockable;	//exclude non-dockable panels from docking
-			});
+			if(!(panels && panels.length)) {
+				return null;
+			}
+			var undockable:Vector.<IPanel> = new Vector.<IPanel>()
+			for (var i:uint = 0; i < panels.length; ++i)
+			{
+				var item:IPanel = panels[i];
+				if(!item.dockable) {
+					undockable.push(item)
+				}
+			}
+			return undockable
 		}
 		
 		private function moveWindowTo(window:NativeWindow, localX:Number, localY:Number, windowPoint:Point):void 
 		{
-			if(!window || !windowPoint || isNaN(windowPoint.x) || isNaN(windowPoint.y) || isNaN(localX) || isNaN(localY)) {
+			if(!(window && windowPoint) || isNaN(windowPoint.x) || isNaN(windowPoint.y) || isNaN(localX) || isNaN(localY)) {
 				return;
 			}
 			var chromeOffset:Point = window.globalToScreen(new Point(localX * window.stage.stageWidth, localY * window.stage.stageHeight))
@@ -746,7 +761,7 @@ package airdock
 			{
 				var targetObj:DisplayObject = evt.target as DisplayObject
 				if (plc_dropTarget != targetObj && cl_treeResolver.findParentContainer(targetObj) != plc_dropTarget) {
-					cl_dockHelper.hideAll()
+					cl_dockHelper.hide()
 				}
 			}
 		}
@@ -757,7 +772,7 @@ package airdock
 				return;
 			}
 			else if (evt.currentTarget == cl_dockHelper) {
-				(evt.currentTarget as IDockHelper).showAll()
+				cl_dockHelper.show()
 			}
 			else if((evt.eventPhase == EventPhase.AT_TARGET && evt.target == evt.currentTarget) || (evt.eventPhase == EventPhase.BUBBLING_PHASE && evt.target != evt.currentTarget))
 			{
@@ -771,7 +786,7 @@ package airdock
 					cl_dockHelper.x = (0.5 * (targetContainer.width - cl_dockHelper.width))
 					targetContainer.addChild(cl_dockHelper as DisplayObject)
 					plc_dropTarget = targetContainer
-					cl_dockHelper.hideAll()
+					cl_dockHelper.hide()
 				}
 			}
 		}
@@ -1413,11 +1428,9 @@ package airdock
 			if (dockHelper)
 			{
 				handles = dockHelper as DisplayObject
-				if (handles)
-				{
-					dockHelper.draw(dockHelper.getDefaultWidth(), dockHelper.getDefaultHeight());
-					addDockHelperListeners(dockHelper);
-				}
+				dockHelper.setDockFormat(cl_dockFormat.panelFormat, cl_dockFormat.containerFormat)
+				dockHelper.draw(dockHelper.getDefaultWidth(), dockHelper.getDefaultHeight());
+				addDockHelperListeners(dockHelper);
 			}
 		}
 		

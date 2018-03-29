@@ -1,5 +1,6 @@
 package airdock.impl.ui 
 {
+	import airdock.delegates.ResizerDelegate;
 	import airdock.enums.PanelContainerSide;
 	import airdock.events.PanelContainerEvent;
 	import airdock.interfaces.docking.IContainer;
@@ -36,17 +37,16 @@ package airdock.impl.ui
 	 */
 	public class DefaultResizer extends Sprite implements IResizer
 	{
-		private var i_sideCode:int;
-		private var b_dragging:Boolean;
 		private var str_prevCursor:String;
 		private var rect_maxSize:Rectangle;
-		private var rect_orientation:Rectangle
-		private var plc_dragContainer:IContainer;
+		private var rect_orientation:Rectangle;
+		private var cl_resizerDelegate:ResizerDelegate;
 		public function DefaultResizer()
 		{
 			buttonMode = true
 			rect_maxSize = new Rectangle()
 			rect_orientation = new Rectangle()
+			cl_resizerDelegate = new ResizerDelegate(this)
 			addEventListener(MouseEvent.MOUSE_DOWN, startResize, false, 0, true)
 		}
 		
@@ -56,70 +56,76 @@ package airdock.impl.ui
 		
 		private function startResize(evt:MouseEvent):void 
 		{
-			b_dragging = true
 			str_prevCursor = Mouse.cursor
 			Mouse.cursor = MouseCursor.HAND
+			cl_resizerDelegate.isDragging = true
+			removeEventListener(MouseEvent.MOUSE_DOWN, startResize)
 			if (stage)
 			{
-				stage.addEventListener(MouseEvent.MOUSE_MOVE, dispatchResize, false, 0, true)
 				stage.addEventListener(MouseEvent.MOUSE_UP, stopResize, false, 0, true)
+				stage.addEventListener(MouseEvent.MOUSE_MOVE, dispatchResize, false, 0, true)
 			}
-			removeEventListener(MouseEvent.MOUSE_DOWN, startResize)
 		}
 		
 		private function stopResize(evt:MouseEvent):void 
 		{
-			if(!b_dragging) {
+			if(!cl_resizerDelegate.isDragging) {
 				return;
 			}
-			b_dragging = false
-			if (stage)
+			else if (stage)
 			{
 				stage.removeEventListener(MouseEvent.MOUSE_MOVE, dispatchResize)
 				stage.removeEventListener(MouseEvent.MOUSE_UP, stopResize)
 			}
 			Mouse.cursor = str_prevCursor
+			cl_resizerDelegate.isDragging = false
 			dispatchEvent(new Event(Event.COMPLETE, false, false))
 			addEventListener(MouseEvent.MOUSE_DOWN, startResize, false, 0, true)
 		}
 		
 		private function dispatchResize(evt:MouseEvent):void 
 		{
-			var bounds:Rectangle = plc_dragContainer.getBounds(parent);
-			if (i_sideCode == PanelContainerSide.LEFT || i_sideCode == PanelContainerSide.RIGHT)
+			if(!cl_resizerDelegate.dispatchResizing()) {
+				return;
+			}
+			var newPosition:Number;
+			var bounds:Rectangle = cl_resizerDelegate.getDragBounds();
+			if (PanelContainerSide.isComplementary(PanelContainerSide.LEFT, cl_resizerDelegate.sideCode))
 			{
-				if (bounds.contains(x + mouseX, bounds.y)) {
-					x += mouseX
+				newPosition = x + mouseX;
+				if (bounds.contains(newPosition, bounds.y)) {
+					x = newPosition;
 				}
 			}
 			else
 			{
-				if (bounds.contains(bounds.x, y + mouseY)) {
-					y += mouseY
+				newPosition = y + mouseY
+				if (bounds.contains(bounds.x, newPosition)) {
+					y = newPosition
 				}
 			}
-			dispatchEvent(new PanelContainerEvent(PanelContainerEvent.RESIZED, null, plc_dragContainer, false, false))
+			cl_resizerDelegate.dispatchResize();
 		}
 		
 		/**
 		 * @inheritDoc
 		 */
 		public function get isDragging():Boolean {
-			return b_dragging
+			return cl_resizerDelegate.isDragging
 		}
 		
 		/**
 		 * @inheritDoc
 		 */
 		public function set container(container:IContainer):void {
-			plc_dragContainer = container
+			cl_resizerDelegate.container = container
 		}
 		
 		/**
 		 * @inheritDoc
 		 */
 		public function get container():IContainer {
-			return plc_dragContainer
+			return cl_resizerDelegate.container
 		}
 		
 		/**
@@ -127,6 +133,7 @@ package airdock.impl.ui
 		 */
 		public function set sideCode(sideCode:int):void
 		{
+			cl_resizerDelegate.sideCode = sideCode
 			if (PanelContainerSide.isComplementary(PanelContainerSide.LEFT, sideCode)) {	//horizontal
 				rect_orientation.setTo(x, rect_maxSize.y, 4, rect_maxSize.height)
 			}
@@ -153,7 +160,6 @@ package airdock.impl.ui
 					break;	
 			}
 			graphics.endFill()
-			i_sideCode = sideCode
 		}
 		
 		/**
@@ -181,7 +187,7 @@ package airdock.impl.ui
 		 * @inheritDoc
 		 */
 		public function get sideCode():int {
-			return i_sideCode
+			return cl_resizerDelegate.sideCode
 		}
 		
 		/**

@@ -59,14 +59,14 @@ package airdock.impl.ui
 	 * @see	airdock.interfaces.docking.IDockTarget
 	 * @see	airdock.interfaces.ui.IDisplayablePanelList
 	 */
-	public class DefaultPanelList extends Sprite implements IDisplayablePanelList, IDockTarget
+	public class DefaultPanelList extends Sprite implements IDisplayablePanelList
 	{
 		public static const ACTIVATED_COLOR:uint = 0xFF86B7E8;
 		public static const DEACTIVATED_COLOR:uint = 0xFF164B9C;
 		
-		private var u_color:uint;
-		private var u_activatedColor:uint;
 		private var u_deactivatedColor:uint;
+		private var u_activatedColor:uint;
+		private var u_color:uint;
 		private var num_maxWidth:Number;
 		private var num_maxHeight:Number;
 		private var tf_panelName:TextField;
@@ -93,8 +93,6 @@ package airdock.impl.ui
 			addEventListener(MouseEvent.CLICK, dispatchShowPanel, false, 0, true)
 			addEventListener(MouseEvent.DOUBLE_CLICK, dispatchDock, false, 0, true);
 			addEventListener(MouseEvent.MOUSE_DOWN, startDispatchDrag, false, 0, true);
-			addEventListener(NativeDragEvent.NATIVE_DRAG_OVER, onDragOver, false, 0, true);
-			addEventListener(NativeDragEvent.NATIVE_DRAG_DROP, onDragDrop, false, 0, true);
 		}
 		
 		/**
@@ -127,7 +125,7 @@ package airdock.impl.ui
 			if (evt.target is PanelTab) {
 				panel = cl_listDelegate.getPanelAt(vec_tabs.indexOf(evt.target as PanelTab));
 			}
-			dispatchEvent(new PanelContainerEvent(PanelContainerEvent.DRAG_REQUESTED, panel, null, true, false))
+			cl_listDelegate.requestDrag(panel)
 			evt.stopImmediatePropagation()
 			stopDispatchDrag(evt)
 		}
@@ -137,24 +135,6 @@ package airdock.impl.ui
 			addEventListener(MouseEvent.MOUSE_DOWN, startDispatchDrag, false, 0, true)
 			removeEventListener(MouseEvent.MOUSE_UP, stopDispatchDrag)
 			removeEventListener(MouseEvent.MOUSE_MOVE, dispatchDrag)
-		}
-		
-		private function onDragDrop(evt:NativeDragEvent):void {
-			dispatchEvent(new DockEvent(DockEvent.DRAG_COMPLETING, evt.clipboard, evt.target as DisplayObject, true, true))
-		}
-		
-		private function onDragOver(evt:NativeDragEvent):void
-		{
-			if (evt.target is PanelTab) {
-				NativeDragManager.acceptDragDrop(evt.target as InteractiveObject)
-			}
-		}
-		
-		/**
-		 * @inheritDoc
-		 */
-		public function getSideFrom(target:DisplayObject):int {
-			return PanelContainerSide.FILL
 		}
 		
 		/**
