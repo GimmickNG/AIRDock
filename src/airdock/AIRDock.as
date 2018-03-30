@@ -539,9 +539,8 @@ package airdock
 			container.addEventListener(MouseEvent.MOUSE_MOVE, showResizerOnEvent, false, 0, true)
 		}
 		
-		private function createContainerOnEvent(e:PanelContainerEvent):void 
-		{
-			//e.relatedContainer.dispatchEvent(new PanelContainerEvent(PanelContainerEvent.CONTAINER_CREATED, null, cl_containerFactory.createContainer(defaultContainerOptions), false, false))
+		private function createContainerOnEvent(evt:PanelContainerEvent):void {
+			evt.relatedContainer.dispatchEvent(new PanelContainerEvent(PanelContainerEvent.CONTAINER_CREATED, evt.relatedPanel, cl_containerFactory.createContainer(defaultContainerOptions), false, false))
 		}
 		
 		private function preventDockOnCrossViolation(evt:NativeDragEvent):void 
@@ -579,6 +578,7 @@ package airdock
 			container.removeEventListener(PanelContainerEvent.REMOVE_REQUESTED, removeContainerIfEmpty)
 			container.removeEventListener(PanelContainerEvent.STATE_TOGGLE_REQUESTED, togglePanelStateOnEvent)
 			container.removeEventListener(PanelContainerEvent.CONTAINER_CREATED, registerContainerOnCreate)
+			container.removeEventListener(PanelContainerEvent.CONTAINER_CREATING, createContainerOnEvent)
 			container.removeEventListener(PanelContainerEvent.SETUP_REQUESTED, customizeContainerOnSetup)
 			container.removeEventListener(NativeDragEvent.NATIVE_DRAG_DROP, preventDockOnCrossViolation)
 			container.removeEventListener(NativeDragEvent.NATIVE_DRAG_ENTER, showDockHelperOnEvent)

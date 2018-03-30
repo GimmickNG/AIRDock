@@ -34,7 +34,16 @@ package airdock.impl
 	[Event(name="pcSetupRequested", type="airdock.events.PanelContainerEvent")]
 	
 	/**
-	 * Dispatched whenever a new container is created automatically by this container; this is done when it is to be added as a subcontainer of this container.
+	 * Dispatched whenever a new container needs to be created for this container, and the Docker implementation has to return an instance to it.
+	 * Can be intercepted to return a different type of container instead.
+	 * 
+	 * If no container is sent to the container, then it falls back to creating a new container automatically, and dispatches a CONTAINER_CREATED event.
+	 * @eventType	airdock.events.PanelContainerEvent.CONTAINER_CREATING
+	 */
+	[Event(name="pcContainerCreating", type="airdock.events.PanelContainerEvent")]
+	
+	/**
+	 * Dispatched whenever a new container has been created for this container, either by the Docker implementation which it is a part of, or by the container itself.
 	 * @eventType	airdock.events.PanelContainerEvent.CONTAINER_CREATED
 	 */
 	[Event(name="pcContainerCreated", type="airdock.events.PanelContainerEvent")]
@@ -876,16 +885,20 @@ package airdock.impl
 			var containerCreated:Boolean;
 			function getContainer(evt:PanelContainerEvent):void
 			{
-				containerCreated = true
+				containerCreated = true;
 				container = evt.relatedContainer;
-				removeEventListener(PanelContainerEvent.CONTAINER_CREATED, getContainer)
+				removeEventListener(PanelContainerEvent.CONTAINER_CREATED, getContainer);
 			}
-			addEventListener(PanelContainerEvent.CONTAINER_CREATED, getContainer);
-			dispatchEvent(new PanelContainerEvent(PanelContainerEvent.CONTAINER_CREATING, null, this, true, false));
-			if (!(container && containerCreated))
+			addEventListener(PanelContainerEvent.CONTAINER_CREATED, getContainer, false, 0, true);
+			dispatchEvent(new PanelContainerEvent(PanelContainerEvent.CONTAINER_CREATING, null, this, true, true));
+			if (!(container && containerCreated)) {
+				container = new DefaultContainer();
+			}
+			//finally...
+			if (container)
 			{
-				container = new DefaultContainer()
-				removeEventListener(PanelContainerEvent.CONTAINER_CREATED, getContainer)
+				removeEventListener(PanelContainerEvent.CONTAINER_CREATED, getContainer);
+				dispatchEvent(new PanelContainerEvent(PanelContainerEvent.CONTAINER_CREATED, null, container, true, false));
 			}
 			return container
 		}
