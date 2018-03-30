@@ -104,7 +104,7 @@ package airdock.impl
 		{
 			var target:IPanel = evt.target as IPanel
 			if (target && target.parent == this && getPanelCount(true) <= 1) {
-				dispatchEvent(new PanelContainerEvent(PanelContainerEvent.REMOVE_REQUESTED, null, this, true, false))
+				dispatchEvent(new PanelContainerEvent(PanelContainerEvent.REMOVE_REQUESTED, null, this, true, true))
 			}
 		}
 		
@@ -253,7 +253,7 @@ package airdock.impl
 			if(evt.isDefaultPrevented()) {
 				return;
 			}
-			dispatchEvent(new PanelContainerEvent(evt.type, evt.relatedPanel, this, true, false))
+			dispatchEvent(new PanelContainerEvent(evt.type, evt.relatedPanel, this, true, evt.cancelable))
 			//for the listeners registered - DRAG and STATE_TOGGLE the relatedPanel is
 			//the panel which is going to be removed (that is, this event occurs before it is removed)
 			//if there is no relatedPanel then it implies that the entire container is to be removed instead
@@ -309,7 +309,7 @@ package airdock.impl
 				}
 			}
 			else {
-				dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SETUP_REQUESTED, null, this, true, false));
+				dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SETUP_REQUESTED, null, this, true, true));
 			}
 		}
 		
@@ -383,7 +383,7 @@ package airdock.impl
 			container.minSideSize = minSideSize
 			container.maxSideSize = maxSideSize
 			setContainers(PanelContainerSide.FILL, null, null)
-			dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SETUP_REQUESTED, null, container, true, false));
+			dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SETUP_REQUESTED, null, container, true, true));
 		}
 		
 		/**
@@ -408,7 +408,7 @@ package airdock.impl
 			if(currentSide) {
 				addChild(currentSide as DisplayObject)
 			}
-			dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SETUP_REQUESTED, null, this, true, false));
+			dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SETUP_REQUESTED, null, this, true, true));
 			render()
 		}
 		
@@ -707,8 +707,8 @@ package airdock.impl
 				
 				render()
 				retCon = container;
-				dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SETUP_REQUESTED, null, container, true, false));
-				dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SETUP_REQUESTED, null, selfContainer, true, false));
+				dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SETUP_REQUESTED, null, container, true, true));
+				dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SETUP_REQUESTED, null, selfContainer, true, true));
 			}
 			return retCon
 		}

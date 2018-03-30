@@ -87,7 +87,7 @@ package airdock.delegates
 		 */
 		private function acceptDragDrop(evt:NativeDragEvent):void
 		{
-			if (evt.clipboard.hasFormat(str_panelFormat) && evt.clipboard.hasFormat(str_containerFormat)) {
+			if (evt.clipboard.hasFormat(str_panelFormat) || evt.clipboard.hasFormat(str_containerFormat)) {
 				dispatchEvent(new DockEvent(DockEvent.DRAG_COMPLETING, evt.clipboard, evt.target as DisplayObject, true, true))
 			}
 		}
@@ -95,7 +95,7 @@ package airdock.delegates
 		private function displayTargetsOnDrag(evt:NativeDragEvent):void 
 		{
 			var currentTarget:InteractiveObject = evt.target as InteractiveObject
-			if (!(currentTarget in dct_dockTargets && evt.clipboard.hasFormat(str_panelFormat) && evt.clipboard.hasFormat(str_containerFormat))) {
+			if (!(currentTarget in dct_dockTargets && (evt.clipboard.hasFormat(str_panelFormat) || evt.clipboard.hasFormat(str_containerFormat)))) {
 				return;
 			}
 			cl_dockHelper.hide();									//hides all the targets

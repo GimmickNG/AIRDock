@@ -41,11 +41,11 @@ package airdock.delegates
 		}
 		
 		public function requestShow(panel:IPanel):Boolean {
-			return panel && cl_dispatcher.dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SHOW_REQUESTED, panel, null, true, true))
+			return panel && dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SHOW_REQUESTED, panel, null, false, true))
 		}
 		
 		public function requestDrag(panel:IPanel):Boolean {
-			return dispatchEvent(new PanelContainerEvent(PanelContainerEvent.DRAG_REQUESTED, panel, null, true, false))
+			return dispatchEvent(new PanelContainerEvent(PanelContainerEvent.DRAG_REQUESTED, panel, null, true, true))
 		}
 		
 		public function requestStateToggle(panel:IPanel):Boolean {

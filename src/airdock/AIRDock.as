@@ -250,15 +250,15 @@ package airdock
 		 */
 		private function filterUndockablePanels(panels:Vector.<IPanel>):Vector.<IPanel>
 		{
-			if(!(panels && panels.length)) {
-				return null;
-			}
 			var undockable:Vector.<IPanel> = new Vector.<IPanel>()
-			for (var i:uint = 0; i < panels.length; ++i)
+			if (panels)
 			{
-				var item:IPanel = panels[i];
-				if(!item.dockable) {
-					undockable.push(item)
+				for (var i:uint = 0; i < panels.length; ++i)
+				{
+					var item:IPanel = panels[i];
+					if(!item.dockable) {
+						undockable.push(item)
+					}
 				}
 			}
 			return undockable
@@ -523,6 +523,7 @@ package airdock
 		
 		private function addContainerListeners(container:IContainer):void
 		{
+			container.addEventListener(PanelContainerEvent.PANEL_ADDED, setRoot, false, 0, true)
 			container.addEventListener(PanelContainerEvent.DRAG_REQUESTED, startDragOnEvent, false, 0, true)
 			container.addEventListener(PanelContainerEvent.STATE_TOGGLE_REQUESTED, togglePanelStateOnEvent, false, 0, true)
 			container.addEventListener(PanelContainerEvent.REMOVE_REQUESTED, removeContainerIfEmpty, false, 0, true)
@@ -535,7 +536,6 @@ package airdock
 			container.addEventListener(Event.ADDED, removeContainerListenersOnLink, false, 0, true)
 			container.addEventListener(DockEvent.DRAG_COMPLETING, finishDragDockEvent, false, 0, true)
 			container.addEventListener(MouseEvent.MOUSE_MOVE, showResizerOnEvent, false, 0, true)
-			container.addEventListener(PanelContainerEvent.PANEL_ADDED, setRoot, false, 0, true)
 		}
 		
 		private function preventDockOnCrossViolation(evt:NativeDragEvent):void 
