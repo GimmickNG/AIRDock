@@ -864,10 +864,29 @@ package airdock.impl
 			return getSide(side)
 		}
 		
+		/**
+		 * Signals that this container wants a new container to be attached to it.
+		 * Returns the IContainer instance which the Docker returns to it via the createContainer() method in the Docker's IContainerFactory.
+		 * If there is no connection to its Docker instance, or if there is otherwise no IContainer instance returned to it, then it falls back to creating a default container.
+		 * @return	A container which is either created by the Docker's IContainerFactory, or a default container.
+		 */
 		private function createContainer():IContainer
 		{
-			var container:IContainer = new DefaultContainer()
-			dispatchEvent(new PanelContainerEvent(PanelContainerEvent.CONTAINER_CREATED, null, container, true, false));
+			var container:IContainer;
+			var containerCreated:Boolean;
+			function getContainer(evt:PanelContainerEvent):void
+			{
+				containerCreated = true
+				container = evt.relatedContainer;
+				removeEventListener(PanelContainerEvent.CONTAINER_CREATED, getContainer)
+			}
+			addEventListener(PanelContainerEvent.CONTAINER_CREATED, getContainer);
+			dispatchEvent(new PanelContainerEvent(PanelContainerEvent.CONTAINER_CREATING, null, this, true, false));
+			if (!(container && containerCreated))
+			{
+				container = new DefaultContainer()
+				removeEventListener(PanelContainerEvent.CONTAINER_CREATED, getContainer)
+			}
 			return container
 		}
 		

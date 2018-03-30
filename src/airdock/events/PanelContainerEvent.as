@@ -102,7 +102,7 @@ package airdock.events
 		 */
 		public static const CONTAINER_CREATED:String = "pcContainerCreated";
 		
-		
+		public static const CONTAINER_CREATING:String = "pcContainerCreating";
 		private var pl_relatedPanel:IPanel;
 		private var plc_relatedContainer:IContainer;
 		public function PanelContainerEvent(type:String, panel:IPanel = null, container:IContainer = null, bubbles:Boolean = false, cancelable:Boolean = false)
