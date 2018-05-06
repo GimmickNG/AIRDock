@@ -23,7 +23,7 @@ package airdock.enums
 	
 	/**
 	 * The default settings for a Docker. It is advised to use this in order to meet most (basic) use cases.
-	 * @author Gimmick
+	 * @author	Gimmick
 	 */
 	public final class DockDefaults 
 	{

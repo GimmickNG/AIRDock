@@ -20,7 +20,7 @@ package airdock.events
 	 * The visibility is said to be changed either when it was not part of any stage and has been added to a container on the stage, or vice versa.
 	 * The state is said to be changed for a panel when it is moved from a non-parked container to the panel's own parked container, or vice versa.
 	 * For a container, it is said to be changed when the container, or the contents of the container, are moved from a non-parked parent container to a parked parent container, or vice versa.
-	 * @author Gimmick
+	 * @author	Gimmick
 	 */
 	public class PanelContainerStateEvent extends PanelContainerEvent
 	{
@@ -59,7 +59,7 @@ package airdock.events
 		/**
 		 * The display state of the panel or container involved, before the event had occurred.
 		 * Valid values are enumerated in the PanelContainerState enumeration class.
-		 * @see airdock.enums.PanelContainerState
+		 * @see	airdock.enums.PanelContainerState
 		 */
 		public function get beforeDisplayState():Boolean {
 			return b_beforeState;
@@ -68,7 +68,7 @@ package airdock.events
 		/**
 		 * The display state of the panel or container involved, after the event has occurred.
 		 * Valid values are enumerated in the PanelContainerState enumeration class.
-		 * @see airdock.enums.PanelContainerState
+		 * @see	airdock.enums.PanelContainerState
 		 */
 		public function get afterDisplayState():Boolean {
 			return b_afterState;

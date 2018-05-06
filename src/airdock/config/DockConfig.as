@@ -11,7 +11,7 @@ package airdock.config
 	import flash.display.NativeWindowInitOptions;
 	/**
 	 * Base configuration class for creating a Docker instance.
-	 * @author Gimmick
+	 * @author	Gimmick
 	 */
 	public class DockConfig extends Object
 	{

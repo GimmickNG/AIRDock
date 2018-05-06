@@ -16,8 +16,9 @@ package airdock.events
 	[Event(name="deDragging", type="airdock.events.DockEvent")]
 
 	/**
-	 * A DockEvent is dispatched, and should be dispatched, whenever a drag-dock action is occurring, or when it is to be completed; this is to notify the originating Docker, which then takes appropriate action.
-	 * @author Gimmick
+	 * A DockEvent is dispatched, and should be dispatched, whenever a drag-dock action is occurring, or when it is to be completed.
+	 * This is to notify the originating Docker instance, which then takes appropriate action.
+	 * @author	Gimmick
 	 */
 	public class DockEvent extends Event 
 	{
@@ -56,7 +57,7 @@ package airdock.events
 		
 		/**
 		 * The clipboard instance of the NativeDragEvent which caused this event to occur (which is usually a NativeDragEvent.NATIVE_DRAG_DROP event.)
-		 * @see flash.events.NativeDragEvent
+		 * @see	flash.events.NativeDragEvent
 		 */
 		public function get clipboard():Clipboard {
 			return cl_clipBoard;

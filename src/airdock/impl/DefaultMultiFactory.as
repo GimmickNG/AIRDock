@@ -14,7 +14,7 @@ package airdock.impl
 	/**
 	 * Default implementation for the IContainerFactory, IPanelFactory, and IPanelListFactory interfaces.
 	 * 
-	 * @author Gimmick
+	 * @author	Gimmick
 	 * @see	airdock.interfaces.factories.IPanelFactory
 	 * @see	airdock.interfaces.factories.IContainerFactory
 	 * @see	airdock.interfaces.factories.IPanelListFactory
@@ -47,7 +47,7 @@ package airdock.impl
 		 */
 		public function createContainer(options:ContainerConfig):IContainer 
 		{
-			var defaultContainer:DefaultContainer = new DefaultContainer()
+			var defaultContainer:IContainer = new DefaultContainer()
 			defaultContainer.height = options.height
 			defaultContainer.width = options.width
 			return defaultContainer

@@ -1,8 +1,16 @@
 package airdock.enums 
 {
 	/**
-	 * ...
-	 * @author Gimmick
+	 * Enumeration class indicating the possible states a panel or container can occupy.
+	 * Each panel or container is either integrated or docked, and visible or invisible.
+	 * 
+	 * An integrated panel (or container) is one belonging to a container whose root is not parked.
+	 * A docked panel (or container) is one belonging to a container whose root is a parked container.
+	 * 
+	 * A visible panel (or container) is that which is visible on the screen; a panel is visible if it belongs to a visible container.
+	 * A container is visible if it is either part of a visible integrated container, or if it is part of a parked container whose window is visible.
+	 * 
+	 * @author	Gimmick
 	 */
 	public final class PanelContainerState 
 	{

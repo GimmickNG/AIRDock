@@ -1,12 +1,11 @@
 package airdock.interfaces.docking 
 {
-	import airdock.interfaces.docking.IContainer;
 	import flash.display.DisplayObject;
 	import flash.display.DisplayObjectContainer;
 	
 	/**
 	 * An interface which is used to define and retrieve the relationships between different containers and their children, which are including, but not limited to, panels.
-	 * @author Gimmick
+	 * @author	Gimmick
 	 */
 	public interface ITreeResolver 
 	{
@@ -26,16 +25,25 @@ package airdock.interfaces.docking
 		
 		/**
 		 * Returns a string representation of the displayObject's relation with the target IContainer instance, as a sequence of side additions as defined in the PanelContainerSide enumeration class.
-		 * For example, if a panel (or any other object, such as a Sprite or another container) is supposed to have its string representation found, with respect to a container 4 levels above it, and this panel is only attached to the left side 3 times consecutively, such that the representation is as follows:
+		 * For example, suppose a panel (or any other object, such as a Sprite or another container) in the given tree (sides not important):
+		 *     A
+		 *   B   C
+		 *     D   E
+		 *       F   G
+		 *           p
+		 * Where p is the panel and C, E, and G are the left containers of A, C, and E respectively.
+		 * In this case, the code for p with respect to A is: 
 		 * * Root (parked) container -> left container -> left container -> left container -> panel
-		 * Then the code returned, assuming the root container is passed to this function, is: LLLF, i.e. read from left to right when going from higher to lower in the display hierarchy, the root's left's left's left's side has the panel occupying it.
+		 * Then the code returned, assuming the root container is passed to this function is LLLF.
+		 * That is, when read from left to right, going from higher to lower in the display hierarchy, the root's left's left's left's side contains the panel.
 		 * Note that all codes can end with FILL (F), as FILL returns the same container. Removing this character does not affect the outcome, but can be used to identify serialized codes.
 		 * 
 		 * In some cases, if a container is used as the targetContainerSpace such that the DisplayObject instance is in another container above it, then may return null, depending on the implementation.
 		 * In that case, call findCommonParent() or its equivalent to determine the new targetContainerSpace to be supplied for this method.
 		 * @param	targetContainerSpace	The container with respect to which the side sequence of the DisplayObject instance is to be found.
 		 * @param	displayObject	The DisplayObject instance whose side sequence is to be found, with respect to the targetContainerSpace.
-		 * @return	A sequence of side codes in string representation for the DisplayObject instance, with respect to the targetContainerSpace. A null value may be returned, if the targetContainerSpace does not contain the DisplayObject instance.
+		 * @return	A sequence of side codes in string representation for the DisplayObject instance, with respect to the targetContainerSpace.
+		 * 			A null value may be returned, if the targetContainerSpace does not contain the DisplayObject instance.
 		 */
 		function serializeCode(targetContainerSpace:IContainer, displayObject:DisplayObject):String
 		

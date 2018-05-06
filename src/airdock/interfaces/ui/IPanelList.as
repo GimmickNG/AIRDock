@@ -7,12 +7,14 @@ package airdock.interfaces.ui
 	 * An interface which defines the methods which an object must fulfil in order to act as a container's panel list.
 	 * A panel list is essentially a collections class which tracks all the panels which are directly part of a container (i.e. not part of the container's subcontainers' panels)
 	 * Instances of this interface are created automatically by the Docker's panelListFactory.
-	 * It is worth noting that instances of this interface are almost entirely managed by the Docker instance and the containers which these are a part of, and are not available to the programmer, except from reference tracking via the Docker's panelListFactory.
+	 * It is worth noting that instances of this interface are almost entirely managed by the Docker instance and the containers which these are a part of.
+	 * The panelList instances are not generally available to the programmer, except from reference tracking via the Docker's panelListFactory.
 	 * As such, all the methods listed in this interface can be assumed to be called automatically by the container.
-	 * For an interface which is graphical and can be interacted with by the user, see the IDisplayablePanelList interface, which defines additional responsibilities for the panel list, in order to effectively communicate with the user.
-	 * @author Gimmick
-	 * @see IDisplayablePanelList
-	 * @see airdock.interfaces.factories.IPanelListFactory
+	 * For an interface which is graphical and can be interacted with by the user, see the IDisplayablePanelList interface.
+	 * The IDisplayablePanelList interface defines additional responsibilities for the panel list, in order to effectively communicate with the user.
+	 * @author	Gimmick
+	 * @see	airdock.interfaces.ui.IDisplayablePanelList
+	 * @see	airdock.interfaces.factories.IPanelListFactory
 	 */
 	public interface IPanelList extends IEventDispatcher
 	{

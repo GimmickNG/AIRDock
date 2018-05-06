@@ -5,7 +5,7 @@ package airdock.interfaces.factories
 	
 	/**
 	 * An interface defining a factory which creates IContainer instances, and must be passed to the Docker instance when creating it.
-	 * @author Gimmick
+	 * @author	Gimmick
 	 */
 	public interface IContainerFactory extends IFactory
 	{
