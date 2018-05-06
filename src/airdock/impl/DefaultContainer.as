@@ -234,7 +234,7 @@ package airdock.impl
 			panelList.removeEventListener(PanelContainerEvent.PANEL_REMOVE_REQUESTED, removePanelOnEvent)
 			panelList.removeEventListener(PanelContainerEvent.STATE_TOGGLE_REQUESTED, sendDockPanelRequest)
 		}
-		//TODO drag_requested does not work for some reason
+		
 		private function addPanelListListeners(panelList:IPanelList):void 
 		{
 			if(!panelList) {
