@@ -8,6 +8,7 @@ package airdock.impl.ui
 	import flash.display.Sprite;
 	import flash.events.Event;
 	import flash.events.MouseEvent;
+	import flash.geom.Point;
 	import flash.geom.Rectangle;
 	import flash.ui.Mouse;
 	import flash.ui.MouseCursor;
@@ -37,27 +38,15 @@ package airdock.impl.ui
 	 */
 	public class DefaultResizer extends Sprite implements IResizer
 	{
-		private var str_prevCursor:String;
-		private var rect_maxSize:Rectangle;
-		private var rect_orientation:Rectangle;
 		private var cl_resizerDelegate:ResizerDelegate;
 		public function DefaultResizer()
 		{
-			buttonMode = true
-			rect_maxSize = new Rectangle()
-			rect_orientation = new Rectangle()
 			cl_resizerDelegate = new ResizerDelegate(this)
 			addEventListener(MouseEvent.MOUSE_DOWN, startResize, false, 0, true)
 		}
 		
-		private function setCursorOnEvent(evt:MouseEvent):void {
-			Mouse.cursor = str_prevCursor;
-		}
-		
 		private function startResize(evt:MouseEvent):void 
 		{
-			str_prevCursor = Mouse.cursor
-			Mouse.cursor = MouseCursor.HAND
 			cl_resizerDelegate.isDragging = true
 			removeEventListener(MouseEvent.MOUSE_DOWN, startResize)
 			if (stage)
@@ -77,7 +66,6 @@ package airdock.impl.ui
 				stage.removeEventListener(MouseEvent.MOUSE_MOVE, dispatchResize)
 				stage.removeEventListener(MouseEvent.MOUSE_UP, stopResize)
 			}
-			Mouse.cursor = str_prevCursor
 			cl_resizerDelegate.isDragging = false
 			dispatchEvent(new Event(Event.COMPLETE, false, false))
 			addEventListener(MouseEvent.MOUSE_DOWN, startResize, false, 0, true)
@@ -134,31 +122,32 @@ package airdock.impl.ui
 		public function set sideCode(sideCode:int):void
 		{
 			cl_resizerDelegate.sideCode = sideCode
+			var maxSize:Rectangle = cl_resizerDelegate.maxSize, orientation:Rectangle = new Rectangle()
 			if (PanelContainerSide.isComplementary(PanelContainerSide.LEFT, sideCode)) {	//horizontal
-				rect_orientation.setTo(x, rect_maxSize.y, 4, rect_maxSize.height)
+				orientation.setTo(x, maxSize.y, 4, maxSize.height)
 			}
 			else if(PanelContainerSide.isComplementary(PanelContainerSide.TOP, sideCode)) {	//vertical
-				rect_orientation.setTo(rect_maxSize.x, y, rect_maxSize.width, 4)
+				orientation.setTo(maxSize.x, y, maxSize.width, 4)
 			}
 			else {
-				return;
+				return;	//invalid side code - return
 			}
 			graphics.clear()
 			graphics.beginFill(0, 1)
-			graphics.drawRect(0, 0, rect_orientation.width, rect_orientation.height)
+			graphics.drawRect(0, 0, orientation.width, orientation.height)
 			switch(sideCode)
 			{
 				case PanelContainerSide.LEFT:
-					graphics.drawRect(rect_orientation.width, ((rect_orientation.height * 0.5) - 8), 8, 16);
+					graphics.drawRect(orientation.width, ((orientation.height * 0.5) - 8), 8, 16);
 					break;
 				case PanelContainerSide.RIGHT:
-					graphics.drawRect(-8, ((rect_orientation.height * 0.5) - 8), 8, 16);
+					graphics.drawRect(-8, ((orientation.height * 0.5) - 8), 8, 16);
 					break;
 				case PanelContainerSide.TOP:
-					graphics.drawRect(((rect_orientation.width * 0.5) - 8), rect_orientation.height, 16, 8);
+					graphics.drawRect(((orientation.width * 0.5) - 8), orientation.height, 16, 8);
 					break;
 				case PanelContainerSide.BOTTOM:
-					graphics.drawRect(((rect_orientation.width * 0.5) - 8), -8, 16, 8);
+					graphics.drawRect(((orientation.width * 0.5) - 8), -8, 16, 8);
 					break;	
 			}
 			graphics.endFill()
@@ -168,7 +157,7 @@ package airdock.impl.ui
 		 * @inheritDoc
 		 */
 		public function set maxSize(size:Rectangle):void {
-			rect_maxSize.copyFrom(size)
+			cl_resizerDelegate.maxSize = size
 		}
 		
 		/**
@@ -198,5 +187,13 @@ package airdock.impl.ui
 		public function get tolerance():Number {
 			return 0.05
 		}	
+		
+		protected function get resizerDelegate():ResizerDelegate {
+			return cl_resizerDelegate;
+		}
+		
+		protected function set resizerDelegate(value:ResizerDelegate):void {
+			cl_resizerDelegate = value;
+		}
 	}
 }

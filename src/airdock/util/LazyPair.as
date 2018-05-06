@@ -5,8 +5,8 @@ package airdock.util
 	 * Use this class if the value to be retrieved requires computation which may be expensive (more expensive than the overhead of the function call), or if the value is not known ahead of time, except through a function.
 	 * This is computationally cheaper than the DynamicPair class since the computation for the value field is performed only once.
 	 * 
-	 * @author Gimmick
-	 * @see StaticPair
+	 * @author	Gimmick
+	 * @see	airdock.util.StaticPair
 	 */
 	public class LazyPair implements IPair
 	{

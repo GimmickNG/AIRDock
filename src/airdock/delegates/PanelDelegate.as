@@ -1,22 +1,25 @@
 package airdock.delegates 
 {
 	import airdock.events.PanelPropertyChangeEvent;
+	import airdock.interfaces.display.IDisplayFilter;
 	import airdock.interfaces.docking.IPanel;
+	import flash.display.DisplayObject;
 	import flash.events.Event;
 	import flash.events.IEventDispatcher;
 	
 	/**
 	 * ...
-	 * @author Gimmick
+	 * @author	Gimmick
 	 */
 	public class PanelDelegate implements IEventDispatcher
 	{
 		private var b_dockable:Boolean;
 		private var b_resizable:Boolean;
+		private var cl_basePanel:IPanel;
 		private var str_panelName:String;
-		private var cl_dispatcher:IEventDispatcher
+		private var vec_displayFilters:Vector.<IDisplayFilter>;
 		public function PanelDelegate(panel:IPanel) {
-			cl_dispatcher = panel;
+			cl_basePanel = panel;
 		}
 		
 		public function dispatchChanging(property:String, oldValue:Object, newValue:Object):Boolean {
@@ -28,23 +31,23 @@ package airdock.delegates
 		}
 		
 		public function addEventListener(type:String, listener:Function, useCapture:Boolean = false, priority:int = 0, useWeakReference:Boolean = false):void {
-			cl_dispatcher.addEventListener(type, listener, useCapture, priority, useWeakReference);
+			cl_basePanel.addEventListener(type, listener, useCapture, priority, useWeakReference);
 		}
 		
 		public function dispatchEvent(event:Event):Boolean {
-			return cl_dispatcher.dispatchEvent(event);
+			return cl_basePanel.dispatchEvent(event);
 		}
 		
 		public function hasEventListener(type:String):Boolean {
-			return cl_dispatcher.hasEventListener(type);
+			return cl_basePanel.hasEventListener(type);
 		}
 		
 		public function removeEventListener(type:String, listener:Function, useCapture:Boolean = false):void {
-			cl_dispatcher.removeEventListener(type, listener, useCapture);
+			cl_basePanel.removeEventListener(type, listener, useCapture);
 		}
 		
 		public function willTrigger(type:String):Boolean {
-			return cl_dispatcher.willTrigger(type);
+			return cl_basePanel.willTrigger(type);
 		}
 		
 		public function get panelName():String 
@@ -85,6 +88,23 @@ package airdock.delegates
 			{
 				b_dockable = value;
 				dispatchChanged("dockable", !value, value)
+			}
+		}
+		
+		public function get displayFilters():Vector.<IDisplayFilter> {
+			return vec_displayFilters && vec_displayFilters.concat();
+		}
+		
+		public function set displayFilters(value:Vector.<IDisplayFilter>):void
+		{
+			var i:int;
+			var filters:Vector.<IDisplayFilter> = vec_displayFilters
+			for (i = int(filters && filters.length) - 1; i >= 0; --i) {
+				filters[i].remove(cl_basePanel);
+			}
+			vec_displayFilters = value.concat();
+			for (i = int(value && value.length) - 1; i >= 0; --i) {
+				value[i].apply(cl_basePanel);
 			}
 		}
 	}

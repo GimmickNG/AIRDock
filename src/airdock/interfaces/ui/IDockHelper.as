@@ -9,9 +9,10 @@ package airdock.interfaces.ui
 	 * An interface defining the methods that a display object must implement in order to participate in the drag-docking mechanism of the Docker.
 	 * A dock helper is a display object container which contains dock targets; this appears whenever the user drags a panel or container over another container.
 	 * The dock helper of the target Docker's containers (be it the same, or a foreign, Docker) will have its methods called by the target Docker.
-	 * To complete the dock operation, the dock helper must report the dock target on which the panel or container has been dropped, at which point responsibility is passed to the respective IDockTarget instance.
-	 * @author Gimmick
-	 * @see airdock.interfaces.docking.IDockTarget
+	 * To complete the dock operation, the dock helper must report the dock target onto which the panel or container has been dropped.
+	 * The responsibility of docking is then passed to the respective IDockTarget instance.
+	 * @author	Gimmick
+	 * @see	airdock.interfaces.docking.IDockTarget
 	 */
 	public interface IDockHelper extends IDisplayObject, IDockTarget
 	{

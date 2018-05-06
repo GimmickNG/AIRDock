@@ -8,17 +8,19 @@ package airdock.delegates
 	import flash.geom.Rectangle;
 	/**
 	 * ...
-	 * @author Gimmick
+	 * @author	Gimmick
 	 */
 	public class ResizerDelegate 
 	{
 		private var i_sideCode:int;
 		private var b_dragging:Boolean;
+		private var rect_maxSize:Rectangle;
 		private var cl_dispatcher:IResizer;
 		private var plc_container:IContainer;
-		public function ResizerDelegate(resizer:IResizer) 
+		public function ResizerDelegate(resizer:IResizer)
 		{
-			cl_dispatcher = resizer
+			cl_dispatcher = resizer;
+			rect_maxSize = new Rectangle();
 		}
 		
 		/**
@@ -83,6 +85,17 @@ package airdock.delegates
 		
 		public function set container(value:IContainer):void {
 			plc_container = value;
+		}
+		
+		public function get maxSize():Rectangle {	//returns a reference because no public getter
+			return rect_maxSize						//in IResizer; only class that should modify this is
+		}											//the IResizer implementation
+		
+		public function set maxSize(size:Rectangle):void 
+		{
+			if (size) {
+				rect_maxSize.copyFrom(size)
+			}
 		}
 		
 	}

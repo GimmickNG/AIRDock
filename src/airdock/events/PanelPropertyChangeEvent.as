@@ -15,7 +15,7 @@ package airdock.events
 	/**
 	 * A PanelPropertyChangeEvent is usually dispatched by an IPanel instance whenever any of its properties has changed.
 	 * This is done to notify its container's IPanelList instance, amongst others, to update, in order to reflect the change in the property.
-	 * @author Gimmick
+	 * @author	Gimmick
 	 */
 	public class PanelPropertyChangeEvent extends Event 
 	{

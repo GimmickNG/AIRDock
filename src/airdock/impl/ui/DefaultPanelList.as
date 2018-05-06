@@ -9,7 +9,10 @@ package airdock.impl.ui
 	import airdock.interfaces.ui.IDisplayablePanelList;
 	import flash.desktop.NativeDragManager;
 	import flash.display.DisplayObject;
+	import flash.display.Graphics;
 	import flash.display.InteractiveObject;
+	import flash.display.LineScaleMode;
+	import flash.display.Shape;
 	import flash.display.Sprite;
 	import flash.events.MouseEvent;
 	import flash.events.NativeDragEvent;
@@ -28,6 +31,12 @@ package airdock.impl.ui
 	 * @eventType	airdock.events.PanelContainerEvent.SHOW_REQUESTED
 	 */
 	[Event(name="pcShowPanel", type="airdock.events.PanelContainerEvent")]
+	
+	/**
+	 * Dispatched when the user has clicked on the close button and the panel is to be removed.
+	 * @eventType	airdock.events.PanelContainerEvent.PANEL_REMOVE_REQUESTED
+	 */
+	[Event(name="pcPanelRemoveRequested", type="airdock.events.PanelContainerEvent")]
 	
 	/**
 	 * Dispatched when the user has double clicked on a tab and the corresponding panel is to be docked, 
@@ -61,14 +70,16 @@ package airdock.impl.ui
 	 */
 	public class DefaultPanelList extends Sprite implements IDisplayablePanelList
 	{
-		public static const ACTIVATED_COLOR:uint = 0xFF86B7E8;
 		public static const DEACTIVATED_COLOR:uint = 0xFF164B9C;
+		public static const ACTIVATED_COLOR:uint = 0xFF86B7E8;
 		
 		private var u_deactivatedColor:uint;
 		private var u_activatedColor:uint;
 		private var u_color:uint;
 		private var num_maxWidth:Number;
 		private var num_maxHeight:Number;
+		private var shp_extraTabs:Shape;
+		private var spr_removePanel:Sprite;
 		private var tf_panelName:TextField;
 		private var vec_tabs:Vector.<PanelTab>;
 		private var pt_preferredLocation:Point;
@@ -83,14 +94,21 @@ package airdock.impl.ui
 			tf_panelName.mouseEnabled = false;
 			addChild(tf_panelName)
 			
+			u_deactivatedColor = DEACTIVATED_COLOR
+			u_activatedColor = ACTIVATED_COLOR;
 			vec_tabs = new Vector.<PanelTab>();
 			pt_preferredLocation = new Point();
 			rect_visibleRegion = new Rectangle();
-			setColors(ACTIVATED_COLOR, DEACTIVATED_COLOR);
 			cl_listDelegate = new PanelListDelegate(this);
 			
+			shp_extraTabs = new Shape()
+			addChild(shp_extraTabs)
+			
+			spr_removePanel = new Sprite()
+			addChild(spr_removePanel)
+			
 			redraw(100, 100);
-			addEventListener(MouseEvent.CLICK, dispatchShowPanel, false, 0, true)
+			addEventListener(MouseEvent.CLICK, handlePanelListClick, false, 0, true)
 			addEventListener(MouseEvent.DOUBLE_CLICK, dispatchDock, false, 0, true);
 			addEventListener(MouseEvent.MOUSE_DOWN, startDispatchDrag, false, 0, true);
 		}
@@ -173,19 +191,32 @@ package airdock.impl.ui
 			var index:int = cl_listDelegate.getPanelIndex(panel);
 			if (index != -1)
 			{
-				vec_tabs[index].setTabName(panel.panelName);
+				var currTab:PanelTab = vec_tabs[index]
+				if(currTab.activeState == PanelTab.ACTIVATED) {
+					tf_panelName.text = panel.panelName;
+				}
+				currTab.setTabName(panel.panelName);
 				redraw(width, height)
 			}
 		}
 		
-		private function dispatchShowPanel(evt:MouseEvent):void
+		private function handlePanelListClick(evt:MouseEvent):void
 		{
-			if(!(evt.target is PanelTab)) {
-				return;
+			if (evt.target is PanelTab)
+			{
+				var panel:IPanel = cl_listDelegate.getPanelAt(vec_tabs.indexOf(evt.target as PanelTab));
+				if(cl_listDelegate.requestShow(panel)) {
+					showPanel(panel)
+				}
 			}
-			var panel:IPanel = cl_listDelegate.getPanelAt(vec_tabs.indexOf(evt.target as PanelTab));
-			if(cl_listDelegate.requestShow(panel)) {
-				showPanel(panel)
+			else if (evt.target == spr_removePanel)
+			{
+				for (var i:uint = 0; i < vec_tabs.length; ++i)
+				{
+					if(vec_tabs[i].activeState == PanelTab.ACTIVATED) {
+						cl_listDelegate.requestRemove(cl_listDelegate.getPanelAt(i));
+					}
+				}
 			}
 		}
 		
@@ -210,19 +241,64 @@ package airdock.impl.ui
 			if(height < 24) {
 				barHeight = height * 0.1
 			}
+			var currTab:PanelTab;
+			var graphics:Graphics;
+			var i:uint, currX:Number = 0;
+			var xOffset:Number = width - barHeight;
+			spr_removePanel.graphics.clear()
+			shp_extraTabs.graphics.clear()
+			if (xOffset > 0)
+			{
+				var removeButtonSize:Number = barHeight * 0.3;
+				var removeButtonBegin:Number = 0.5 * (barHeight - removeButtonSize);
+				var removeButtonEnd:Number = removeButtonBegin + removeButtonSize
+				graphics = spr_removePanel.graphics
+				graphics.beginFill(deactivatedColor & 0x00FFFFFF, ((deactivatedColor & 0xFF000000) >>> 24) / 0xFF)
+				graphics.drawRect(xOffset + removeButtonBegin, removeButtonBegin, removeButtonSize, removeButtonSize)
+				graphics.lineStyle(1, 0, 1, false, LineScaleMode.NONE)
+				graphics.moveTo(xOffset + removeButtonBegin, removeButtonBegin)
+				graphics.lineTo(xOffset + removeButtonEnd, removeButtonEnd)
+				graphics.moveTo(xOffset + removeButtonBegin, removeButtonEnd)
+				graphics.lineTo(xOffset + removeButtonEnd, removeButtonBegin)
+				
+				var panelsOmitted:Boolean;
+				graphics = shp_extraTabs.graphics
+				for (i = 0; i < vec_tabs.length; ++i) 
+				{
+					currTab = vec_tabs[i];
+					panelsOmitted = (currTab.x + currTab.width) > width
+					if(panelsOmitted) {
+						break;
+					}
+					currX = currTab.x + currTab.width
+				}
+				var radius:Number = barHeight * 0.05;
+				var circY:Number, circSpacing:Number = radius * 2.5;
+				if (panelsOmitted && (width - currX) > (circSpacing * 4))
+				{
+					currX = width - (circSpacing * 4)
+					circY = height - (circSpacing * 2);
+					graphics.beginFill(deactivatedColor, 1);
+					for (var j:int = 0; j < 3; ++j) {
+						graphics.drawCircle(currX + (j * circSpacing), circY, radius)
+					}
+					graphics.endFill()
+				}
+			}
+			graphics = this.graphics
 			graphics.clear()
-			graphics.lineStyle(1)
+			graphics.lineStyle(1, 0, 1, false, LineScaleMode.NONE)
 			graphics.beginFill(deactivatedColor & 0x00FFFFFF, ((deactivatedColor & 0xFF000000) >>> 24) / 0xFF)
 			graphics.drawRect(0, 0, width - 1, barHeight)
 			graphics.endFill()
 			graphics.beginFill(activatedColor, ((activatedColor & 0xFF000000) >>> 24) / 0xFF)
 			graphics.drawRect(0, height - barHeight, width - 1, barHeight)
 			graphics.endFill()
-			tf_panelName.width = width;
+			tf_panelName.width = xOffset;
 			tf_panelName.height = barHeight;
-			for (var i:uint = 0, currX:Number = 0; i < vec_tabs.length; ++i)
+			for (i = 0, currX = 0; i < vec_tabs.length; ++i)
 			{
-				var currTab:PanelTab = vec_tabs[i];
+				currTab = vec_tabs[i];
 				currTab.activatedColor = activatedColor
 				currTab.deactivatedColor = deactivatedColor
 				currTab.redraw(currTab.width, barHeight);
@@ -233,7 +309,7 @@ package airdock.impl.ui
 					addChild(currTab)
 				}
 				else if(currTab.parent) {
-					removeChild(vec_tabs[i])
+					removeChild(currTab)
 				}
 			}
 		}
@@ -410,6 +486,10 @@ internal class PanelTab extends Sprite
 			return u_activatedColor
 		}
 		return u_deactivatedColor
+	}
+	
+	public function get activeState():Boolean {
+		return b_state
 	}
 	
 	public function get deactivatedColor():uint {

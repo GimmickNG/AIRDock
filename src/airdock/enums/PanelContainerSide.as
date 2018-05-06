@@ -4,7 +4,7 @@ package airdock.enums
 	
 	/**
 	 * The enumeration class which dictates the sides to which containers attach to.
-	 * @author Gimmick
+	 * @author	Gimmick
 	 */
 	public final class PanelContainerSide
 	{
@@ -12,18 +12,22 @@ package airdock.enums
 		 * Gets the current container.
 		 */
 		public static const FILL:int = 0;		//00000000
+		
 		/**
 		 * Gets the left side of the current container. 
 		 */
 		public static const LEFT:int = 1;		//00000001
+		
 		/**
 		 * Gets the right side of the current container. 
 		 */
 		public static const RIGHT:int = 3;		//00000011
+		
 		/**
 		 * Gets the top side of the current container. 
 		 */
 		public static const TOP:int = 4;		//00000100
+		
 		/**
 		 * Gets the bottom side of the current container. 
 		 */
@@ -33,18 +37,22 @@ package airdock.enums
 		 * String representation of FILL.
 		 */
 		public static const STRING_FILL:String = "F";
+		
 		/**
 		 * String representation of LEFT.
 		 */
 		public static const STRING_LEFT:String = "L"
+		
 		/**
 		 * String representation of RIGHT.
 		 */
 		public static const STRING_RIGHT:String = "R";
+		
 		/**
 		 * String representation of TOP.
 		 */
 		public static const STRING_TOP:String = "T";
+		
 		/**
 		 * String representation of BOTTOM.
 		 */
@@ -125,6 +133,7 @@ package airdock.enums
 		
 		/**
 		 * Convert a side, in string format, to an integer. Invalid values return FILL, by default.
+		 * Does not convert multiple side codes; only a single side code at a time is supported.
 		 * @param	side	The side to get the integer representation of, as a string.
 		 * @return	The integer representation of the side, as listed in this enumeration.
 		 */
@@ -186,28 +195,27 @@ package airdock.enums
 			if(!side) {
 				return null;
 			}
-			else if (side.length > 1)
+			else
 			{
 				var complementary:String = "";
-				for (var i:uint = 0; i < side.length; ++i) {
-					complementary += getComplementaryString(side.charAt(i));
+				for (var i:uint = 0; i < side.length; ++i)
+				{
+					switch(side.charAt(i))
+					{
+						case STRING_LEFT:
+							complementary += STRING_RIGHT;
+						case STRING_RIGHT:
+							complementary += STRING_LEFT;
+						case STRING_TOP:
+							complementary += STRING_BOTTOM;
+						case STRING_BOTTOM:
+							complementary += STRING_TOP;
+						case STRING_FILL:
+						default:
+							complementary += STRING_FILL;	
+					}
 				}
 				return complementary
-			}
-			
-			switch(side)
-			{
-				case STRING_LEFT:
-					return STRING_RIGHT;
-				case STRING_RIGHT:
-					return STRING_LEFT;
-				case STRING_TOP:
-					return STRING_BOTTOM;
-				case STRING_BOTTOM:
-					return STRING_TOP;
-				case STRING_FILL:
-				default:
-					return STRING_FILL;	
 			}
 		}
 		

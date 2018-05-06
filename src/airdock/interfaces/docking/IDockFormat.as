@@ -4,7 +4,7 @@ package airdock.interfaces.docking
 	/**
 	 * The class defining the strings keys used for storing the panel and container in clipboards during a drag-docking operation.
 	 * This is useful when intercepting drag events and capturing the panel and/or container instances.
-	 * @author Gimmick
+	 * @author	Gimmick
 	 */
 	public interface IDockFormat 
 	{
@@ -12,9 +12,6 @@ package airdock.interfaces.docking
 		 * The string key for storing panels in the clipboard.
 		 */
 		function get panelFormat():String;
-		/**
-		 * The string key for storing containers in the clipboard.
-		 */
 		function get containerFormat():String;
 	}
 	

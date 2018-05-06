@@ -5,7 +5,7 @@ package airdock.interfaces.docking
 	
 	/**
 	 * The interface defining the function to determine which side of a container a panel is to be attached to, at the end of a drag(-drop)-dock operation.
-	 * @author Gimmick
+	 * @author	Gimmick
 	 */
 	public interface IDockTarget extends IDisplayObjectContainer
 	{
@@ -14,7 +14,7 @@ package airdock.interfaces.docking
 		 * Acceptable values are located in the PanelContainerSide enumeration class.
 		 * @param	dropTarget	The target DisplayObject instance on which the user drops the panel just before the drag-docking operation is finished.
 		 * @return	The side of the current container to which the panel should be added to, as an integer.
-		 * @see airdock.enums.PanelContainerSide
+		 * @see	airdock.enums.PanelContainerSide
 		 */
 		function getSideFrom(dropTarget:DisplayObject):int;
 	}

@@ -6,8 +6,8 @@ package airdock.util
 	 * The main difference between this and the lazy pair is that values are not cached upon retrieval in this class.
 	 * 
 	 * For example, an iterator may be implemented using this class, since the value retrieved by calling the function is not cached (since the function is called each time.)
-	 * @author Gimmick
-	 * @see StaticPair
+	 * @author	Gimmick
+	 * @see	airdock.util.StaticPair
 	 */
 	public class DynamicPair implements IPair
 	{		
@@ -24,7 +24,7 @@ package airdock.util
 		public function DynamicPair(key:Object, valueFunction:Function, ...args) 
 		{
 			obj_key = key;
-			arr_arguments = [key].concat(args)
+			arr_arguments = args && args.concat()
 			fn_valueFunction = valueFunction;
 		}
 		

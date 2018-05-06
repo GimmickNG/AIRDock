@@ -3,7 +3,7 @@ package airdock.config
 	/**
 	 * Base configuration class for creating a panel. 
 	 * Extra attributes can be added for customizability, subject to the instance of the PanelFactory used by the Docker.
-	 * @author Gimmick
+	 * @author	Gimmick
 	 */
 	public class PanelConfig extends Object
 	{

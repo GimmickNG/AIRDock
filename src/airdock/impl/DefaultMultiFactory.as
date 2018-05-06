@@ -14,7 +14,7 @@ package airdock.impl
 	/**
 	 * Default implementation for the IContainerFactory, IPanelFactory, and IPanelListFactory interfaces.
 	 * 
-	 * @author Gimmick
+	 * @author	Gimmick
 	 * @see	airdock.interfaces.factories.IPanelFactory
 	 * @see	airdock.interfaces.factories.IContainerFactory
 	 * @see	airdock.interfaces.factories.IPanelListFactory

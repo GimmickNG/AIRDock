@@ -13,7 +13,7 @@ package airdock.impl
 	 * Uses the implicit display list to resolve the relationships between containers and other display objects; 
 	 * an alternate implementation may involve using explicit parent references in IContainers for use by the resolver.
 	 * 
-	 * @author Gimmick
+	 * @author	Gimmick
 	 * @see	airdock.interfaces.docking.ITreeResolver
 	 */
 	public final class DefaultTreeResolver implements ITreeResolver
@@ -23,7 +23,6 @@ package airdock.impl
 		/**
 		 * @inheritDoc
 		 */
-		[Inline]
 		public function findRootContainer(container:IContainer):IContainer
 		{
 			var parent:DisplayObject = container as DisplayObject;
@@ -39,7 +38,6 @@ package airdock.impl
 		/**
 		 * @inheritDoc
 		 */
-		[Inline]
 		public function findParentContainer(displayObject:DisplayObject):IContainer
 		{
 			var currParent:DisplayObjectContainer

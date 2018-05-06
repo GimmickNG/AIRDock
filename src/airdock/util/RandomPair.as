@@ -8,7 +8,7 @@ package airdock.util
 	 * If cryptographically strong numbers cannot be generated on the target operating system, then an error is thrown.
 	 * 
 	 * For example, a die-rolling mechanism can be implemented using this class.
-	 * @author Gimmick
+	 * @author	Gimmick
 	 */
 	public class RandomPair implements IPair
 	{

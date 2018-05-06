@@ -15,7 +15,7 @@ package airdock.impl.ui
 
 	/**
 	 * Dispatched when the user has dropped the panel or container onto the dock target, and the Docker is to decide what action to take.
-	 * @eventType airdock.events.DockEvent.DRAG_COMPLETING
+	 * @eventType	airdock.events.DockEvent.DRAG_COMPLETING
 	 */
 	[Event(name="deDragCompleting", type="airdock.events.DockEvent")]
 	
@@ -24,8 +24,8 @@ package airdock.impl.ui
 	 * 
 	 * Provides a cross-shaped interface which allows the user to integrate panels or containers onto the left, right, top and bottom.
 	 * 
-	 * @author Gimmick
-	 * @see airdock.interfaces.ui.IDockHelper
+	 * @author	Gimmick
+	 * @see	airdock.interfaces.ui.IDockHelper
 	 */
 	public class DefaultDockHelper extends Sprite implements IDockHelper
 	{

@@ -3,6 +3,7 @@ package airdock.impl
 	import airdock.delegates.PanelDelegate;
 	import airdock.enums.PanelContainerState;
 	import airdock.events.PanelPropertyChangeEvent;
+	import airdock.interfaces.display.IDisplayFilter;
 	import airdock.interfaces.docking.IPanel;
 	import flash.display.DisplayObject;
 	import flash.display.DisplayObjectContainer;
@@ -80,6 +81,14 @@ package airdock.impl
 		 */
 		public function getDefaultWidth():Number {
 			return 256;
+		}
+		
+		public function get displayFilters():Vector.<IDisplayFilter> {
+			return cl_panelDelegate.displayFilters;
+		}
+		
+		public function set displayFilters(value:Vector.<IDisplayFilter>):void {
+			cl_panelDelegate.displayFilters = value;
 		}
 		
 		public function get backgroundColor():uint {

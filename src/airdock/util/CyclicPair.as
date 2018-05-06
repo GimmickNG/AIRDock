@@ -6,7 +6,7 @@ package airdock.util
 	 * Use this class if the value to be retrieved alternates between a set of values in a stepwise manner.
 	 * 
 	 * For example, an iterator may be implemented using this class, since the value retrieved by calling the function varies, stepping through each element in the set.
-	 * @author Gimmick
+	 * @author	Gimmick
 	 */
 	public class CyclicPair implements IPair
 	{

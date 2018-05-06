@@ -11,9 +11,10 @@ package airdock.delegates
 	import flash.events.IEventDispatcher;
 	import flash.events.NativeDragEvent;
 	import flash.utils.Dictionary;
+	
 	/**
 	 * ...
-	 * @author Gimmick
+	 * @author	Gimmick
 	 */
 	public class DockHelperDelegate implements IEventDispatcher
 	{
@@ -35,7 +36,8 @@ package airdock.delegates
 		
 		/**
 		 * Adds the targets specified to the list of all dock helper candidates/targets.
-		 * Each target is a key-value pair with the key as the target displayObject and the value as the side which it represents, or the side that a container or panel will be attached to when dropped on that target.
+		 * Each target is a key-value pair with the key as the target displayObject and the value as the side it represents.
+		 * In other words, the value is the side that a container or panel will be attached to when dropped on that target.
 		 * @param	targets	A Vector of key-value pairs with the key as the target displayObject and the value as the side which it represents.
 		 * @see	airdock.util.IPair
 		 */

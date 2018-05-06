@@ -8,7 +8,7 @@ package airdock.delegates
 	import flash.events.IEventDispatcher;
 	/**
 	 * ...
-	 * @author Gimmick
+	 * @author	Gimmick
 	 */
 	public class PanelListDelegate implements IEventDispatcher
 	{
@@ -41,13 +41,31 @@ package airdock.delegates
 		}
 		
 		public function requestShow(panel:IPanel):Boolean {
-			return panel && dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SHOW_REQUESTED, panel, null, false, true))
+			return panel && dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SHOW_REQUESTED, panel, null, true, true))
 		}
 		
+		/**
+		 * Requests the panelList's container to start a drag-dock operation for the given panel.
+		 * If no panel is supplied (i.e. a null panel) then the drag-dock operation is started for the entire container.
+		 * @param	panel	An (optional) IPanel instance which is to take part in a drag-dock operation.
+		 * 					A null IPanel instance indicates the entire container should take part in the drag-dock operation.
+		 * @return	A Boolean indicating whether the operation was a success. If the event was prevented via preventDefault(), false is returned.
+		 */
 		public function requestDrag(panel:IPanel):Boolean {
 			return dispatchEvent(new PanelContainerEvent(PanelContainerEvent.DRAG_REQUESTED, panel, null, true, true))
 		}
 		
+		public function requestRemove(panel:IPanel):Boolean {
+			return panel && dispatchEvent(new PanelContainerEvent(PanelContainerEvent.PANEL_REMOVE_REQUESTED, panel, null, true, true))
+		}
+		
+		/**
+		 * Requests the panelList's container to toggle the state (docked to integrated and vice versa) for the given panel
+		 * If no panel is supplied (i.e. a null panel) then the state toggle operation is applied to the entire container.
+		 * @param	panel	An (optional) IPanel instance whose state is to be toggled (from docked to integrated and vice versa)
+		 * 					A null IPanel instance indicates the state toggle operation is to be applied to the entire container.
+		 * @return	A Boolean indicating whether the operation was a success. If the event was prevented via preventDefault(), false is returned.
+		 */
 		public function requestStateToggle(panel:IPanel):Boolean {
 			return dispatchEvent(new PanelContainerEvent(PanelContainerEvent.STATE_TOGGLE_REQUESTED, panel, null, true, true))
 		}
@@ -61,7 +79,7 @@ package airdock.delegates
 			var result:IPanel;
 			var index:int = getPanelIndex(panel);
 			if(index != -1) {
-				result = removePanelAt(index)
+				result = removePanelAt(index);
 			}
 			return result;
 		}

@@ -3,6 +3,7 @@ package airdock.interfaces.display
 	import flash.accessibility.AccessibilityProperties;
 	import flash.display.DisplayObject;
 	import flash.display.DisplayObjectContainer;
+	import flash.display.IBitmapDrawable;
 	import flash.display.LoaderInfo;
 	import flash.display.Shader;
 	import flash.display.Stage;
@@ -19,7 +20,7 @@ package airdock.interfaces.display
 	 * Taken from the model of the DisplayObject class.
 	 * @author Gimmick
 	 */
-	public interface IDisplayObject extends IEventDispatcher
+	public interface IDisplayObject extends IEventDispatcher, IBitmapDrawable
 	{
 		function get accessibilityProperties () : flash.accessibility.AccessibilityProperties;
 		function set accessibilityProperties (value:AccessibilityProperties) : void;

@@ -6,39 +6,10 @@ package airdock.interfaces.ui
 	
 	/**
 	 * An interface defining the methods that a (display)object must fulfil in order to be able to resize containers of a Docker.
-	 * @author Gimmick
+	 * @author	Gimmick
 	 */
 	public interface IResizer extends IDisplayObject
 	{
-		/**
-		 * The side of the container that the resizer is to be, and will be, resized.
-		 * This is automatically set by the Docker whenever the resize is to take place.
-		 * @return	The side code of the container which is to be resized.
-		 */
-		function get sideCode():int;
-		
-		/**
-		 * The side of the container that the resizer is to be, and will be, resized.
-		 * This is automatically set by the Docker whenever the resize is to take place.
-		 * @return	The side code of the container which is to be resized.
-		 */
-		function set sideCode(sideCode:int):void
-		
-		/**
-		 * The container which is to be resized. This is automatically set by the Docker whenever the resize is to take place.
-		 */
-		function get container():IContainer;
-		
-		/**
-		 * The container which is to be resized. This is automatically set by the Docker whenever the resize is to take place.
-		 */
-		function set container(container:IContainer):void;
-		
-		/**
-		 * The maximum visible size available, as a rectangle, to the resizer to draw its graphical content.
-		 */
-		function set maxSize(size:Rectangle):void
-		
 		/**
 		 * The preferred percentage of the container's width where the resizer is to lie within. Read-only.
 		 * For example, a value of 0 is the leftmost side of the container, a value of 0.5 is the horizontal center of the container, and a value of 1 is the rightmost side of the container.
@@ -60,8 +31,26 @@ package airdock.interfaces.ui
 		/**
 		 * The minimum percentage of the container's size within which the user's cursor must be within, in order to activate the resizer and start a possible resize operation.
 		 * The size depends on the current side of the container, and by extension, the resizer as well; a side of LEFT or RIGHT takes the width as the size, and TOP or BOTTOM takes the height as the size.
-		 * @see airdock.enums.PanelContainerSide
+		 * @see	airdock.enums.PanelContainerSide
 		 */
 		function get tolerance():Number;
+		
+		/**
+		 * The maximum visible size available, as a rectangle, to the resizer to draw its graphical content.
+		 */
+		function set maxSize(size:Rectangle):void
+		
+		/**
+		 * The side of the container that the resizer is to be, and will be, resized to.
+		 * This is automatically set by the Docker whenever the resize is to take place.
+		 */
+		function get sideCode():int;
+		function set sideCode(sideCode:int):void
+		
+		/**
+		 * The container which is to be resized. This is automatically set by the Docker whenever the resize is to take place.
+		 */
+		function get container():IContainer;
+		function set container(container:IContainer):void;
 	}
 }
