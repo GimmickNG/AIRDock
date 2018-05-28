@@ -48,13 +48,12 @@ package airdock.interfaces.docking
 		function serializeCode(targetContainerSpace:IContainer, displayObject:DisplayObject):String
 		
 		/**
-		 * Finds the common DisplayObjectContainer instance for the two given DisplayObject instances.
-		 * Note that this can be used for non-panels and non-containers, and does not guarantee that it will return an IContainer instance.
-		 * @param	displayObject	The first DisplayObject instance.
-		 * @param	otherDisplayObject	The second DisplayObject instance.
+		 * Finds the common DisplayObjectContainer instance for all the given DisplayObject instances in the list.
+		 * Note that this can be used for non-panels and non-containers, and as such, does not guarantee that it will return an IContainer instance.
+		 * @param	displayObjects	A Vector of DisplayObject instances to find the common parent of.
 		 * @return	The DisplayObjectContainer instance which contains the two instances supplied, which may be at different levels with respect to each other.
 		 */
-		function findCommonParent(displayObject:DisplayObject, otherDisplayObject:DisplayObject):DisplayObjectContainer
+		function findCommonParent(displayObjects:Vector.<DisplayObject>):DisplayObjectContainer
 	}
 	
 }

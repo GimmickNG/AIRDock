@@ -2,6 +2,7 @@ package airdock.interfaces.docking
 {
 	import airdock.interfaces.factories.IPanelListFactory;
 	import airdock.interfaces.ui.IDockHelper;
+	import airdock.interfaces.ui.IResizer;
 	
 	/**
 	 * The interface defining the set of methods that a customizable Docker must fulfil.
@@ -22,7 +23,8 @@ package airdock.interfaces.docking
 		 * An IDockHelper instance which determines the user interface for docking. Setting this to null prevents the user from docking panels.
 		 * @param	helper	An IDockHelper instance which determines the user interface used for docking panels by the user.
 		 */
-		function set dockHelper(helper:IDockHelper):void
+		function get dockHelper():IDockHelper;
+		function set dockHelper(helper:IDockHelper):void;
 		
 		/**
 		 * Gets and sets the width of the thumbnail of the panel or container being dragged by the user.
@@ -37,6 +39,13 @@ package airdock.interfaces.docking
 		 */
 		function get dragImageHeight():Number;
 		function set dragImageHeight(value:Number):void;
+		
+		/**
+		 * The resize helper instance. This is used to let the user resize containers, when they activate this - usually by hovering at the border of two containers.
+		 * Setting this to null prevents the user from resizing panels, and can hence be used to enforce strict panel sizes for a given Docker instance.
+		 */
+		function get resizeHelper():IResizer;
+		function set resizeHelper(value:IResizer):void;
 	}
 	
 }

@@ -94,6 +94,13 @@ package airdock.events
 		public static const CONTAINER_REMOVE_REQUESTED:String = "pcContainerRemoveRequested";
 		
 		/**
+		 * The constant used to define a removed event.
+		 * Is dispatched whenever a container (which has requested to be removed) has been removed from its parent container.
+		 * Containers which are removed from their parent containers (and are not parked) are unreachable and can be safely disposed of.
+		 */
+		public static const CONTAINER_REMOVED:String = "pcContainerRemoved";
+		
+		/**
 		 * The constant used to define a stateToggleRequested event.
 		 * Is dispatched whenever a container's panelList (or any other DisplayObject instance) has requested that the state of either a panel or a container be changed.
 		 * Since this is a request, it can be canceled to prevent default action.
@@ -131,27 +138,27 @@ package airdock.events
 		 */
 		public static const CONTAINER_CREATING:String = "pcContainerCreating";
 		
-		private var pl_relatedPanel:IPanel;
+		private var vec_relatedPanels:Vector.<IPanel>;
 		private var plc_relatedContainer:IContainer;
-		public function PanelContainerEvent(type:String, panel:IPanel = null, container:IContainer = null, bubbles:Boolean = false, cancelable:Boolean = false)
+		public function PanelContainerEvent(type:String, panels:Vector.<IPanel> = null, container:IContainer = null, bubbles:Boolean = false, cancelable:Boolean = false)
 		{
 			super(type, bubbles, cancelable);
 			plc_relatedContainer = container;
-			pl_relatedPanel = panel;
+			vec_relatedPanels = panels;
 		}
 		
 		/**
 		 * @inheritDoc
 		 */
 		override public function clone():Event { 
-			return new PanelContainerEvent(type, relatedPanel, relatedContainer, bubbles, cancelable);
+			return new PanelContainerEvent(type, relatedPanels, relatedContainer, bubbles, cancelable);
 		}
 		
 		/**
 		 * @inheritDoc
 		 */
 		override public function toString():String { 
-			return formatToString("PanelContainerEvent", "type", "relatedPanel", "relatedContainer", "bubbles", "cancelable", "eventPhase"); 
+			return formatToString("PanelContainerEvent", "type", "relatedPanels", "relatedContainer", "bubbles", "cancelable", "eventPhase"); 
 		}
 		
 		/**
@@ -167,8 +174,8 @@ package airdock.events
 		 * Unlike the relatedContainer property, there is no guarantee that it will not be null, especially when there are multiple panels involved.
 		 * For example, when the entire container's contents are involved, instead of just one panel, the panel property is null, but not the container..
 		 */
-		public function get relatedPanel():IPanel {
-			return pl_relatedPanel;
+		public function get relatedPanels():Vector.<IPanel> {
+			return vec_relatedPanels;
 		}
 	}
 }

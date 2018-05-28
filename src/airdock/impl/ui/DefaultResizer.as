@@ -17,13 +17,13 @@ package airdock.impl.ui
 	 * Dispatched when the resizing operation has completed.
 	 * @eventType	flash.events.Event.COMPLETE
 	 */
-	[Event(name = "complete", type = "flash.events.Event")]
+	[Event(name="complete", type="flash.events.Event")]
 	
 	/**
 	 * Dispatched whenever a resize operation has been applied, i.e. the corresponding container has been resized.
 	 * @eventType	airdock.events.PanelContainerEvent.RESIZED
 	 */
-	[Event(name = "pcContainerResized", type = "airdock.events.PanelContainerEvent")]
+	[Event(name="pcContainerResized", type="airdock.events.PanelContainerEvent")]
 	
 	/**
 	 * Default IResizer implementation.
@@ -41,13 +41,15 @@ package airdock.impl.ui
 		private var cl_resizerDelegate:ResizerDelegate;
 		public function DefaultResizer()
 		{
-			cl_resizerDelegate = new ResizerDelegate(this)
+			buttonMode = doubleClickEnabled = true;
+			resizerDelegate = new ResizerDelegate(this)
 			addEventListener(MouseEvent.MOUSE_DOWN, startResize, false, 0, true)
+			addEventListener(MouseEvent.DOUBLE_CLICK, togglePanelSizeOnDoubleClick, false, 0, true)
 		}
 		
 		private function startResize(evt:MouseEvent):void 
 		{
-			cl_resizerDelegate.isDragging = true
+			resizerDelegate.isDragging = true
 			removeEventListener(MouseEvent.MOUSE_DOWN, startResize)
 			if (stage)
 			{
@@ -58,7 +60,7 @@ package airdock.impl.ui
 		
 		private function stopResize(evt:MouseEvent):void 
 		{
-			if(!cl_resizerDelegate.isDragging) {
+			if(!resizerDelegate.isDragging) {
 				return;
 			}
 			else if (stage)
@@ -66,54 +68,97 @@ package airdock.impl.ui
 				stage.removeEventListener(MouseEvent.MOUSE_MOVE, dispatchResize)
 				stage.removeEventListener(MouseEvent.MOUSE_UP, stopResize)
 			}
-			cl_resizerDelegate.isDragging = false
+			resizerDelegate.isDragging = false
 			dispatchEvent(new Event(Event.COMPLETE, false, false))
 			addEventListener(MouseEvent.MOUSE_DOWN, startResize, false, 0, true)
 		}
 		
 		private function dispatchResize(evt:MouseEvent):void 
 		{
-			if(!cl_resizerDelegate.dispatchResizing()) {
+			var newPosition:Number;
+			var sideCode:int = resizerDelegate.sideCode;
+			var bounds:Rectangle = resizerDelegate.getDragBounds();
+			if(!bounds) {
 				return;
 			}
-			var newPosition:Number;
-			var bounds:Rectangle = cl_resizerDelegate.getDragBounds();
-			if (PanelContainerSide.isComplementary(PanelContainerSide.LEFT, cl_resizerDelegate.sideCode))
+			else if (PanelContainerSide.isComplementary(PanelContainerSide.LEFT, sideCode))
 			{
 				newPosition = x + mouseX;
-				if (bounds.contains(newPosition, bounds.y)) {
-					x = newPosition;
+				if (!bounds.contains(newPosition, bounds.y)) {
+					return;
 				}
 			}
 			else
 			{
-				newPosition = y + mouseY
-				if (bounds.contains(bounds.x, newPosition)) {
-					y = newPosition
+				newPosition = y + mouseY;
+				if (!bounds.contains(bounds.x, newPosition)) {
+					return;
 				}
 			}
-			cl_resizerDelegate.dispatchResize();
+			var ratio:Number;
+			var position:Point = container.globalToLocal(new Point(newPosition, newPosition))
+			if (PanelContainerSide.isComplementary(PanelContainerSide.LEFT, sideCode))
+			{
+				x = newPosition;
+				ratio = position.x / container.width;
+			}
+			else
+			{
+				y = newPosition;
+				ratio = position.y / container.height;
+			}
+			resizerDelegate.requestResize(ratio)
+		}
+		
+		/**
+		 * Minimizes the container when the resizer is double-clicked.
+		 */
+		private function togglePanelSizeOnDoubleClick(evt:MouseEvent):void 
+		{
+			var newPosition:Number, ratio:Number = 0.0;
+			var bounds:Rectangle = resizerDelegate.getDragBounds();
+			if(!bounds) {
+				return;
+			}
+			else if(sideCode == PanelContainerSide.LEFT || sideCode == PanelContainerSide.TOP) {
+				ratio = 1.0;
+			}
+			switch(sideCode)
+			{
+				case PanelContainerSide.LEFT:
+				case PanelContainerSide.RIGHT:
+					newPosition = x = bounds.x + (bounds.width * int(ratio))
+					break;
+				case PanelContainerSide.TOP:
+					newPosition = y = bounds.y + (bounds.height * int(ratio));
+					break;
+				default:
+					return;
+			}
+			
+			resizerDelegate.requestResize(ratio);
+			drawSide(PanelContainerSide.getComplementary(sideCode));	//flips handle to show it on other side
 		}
 		
 		/**
 		 * @inheritDoc
 		 */
 		public function get isDragging():Boolean {
-			return cl_resizerDelegate.isDragging
+			return resizerDelegate.isDragging
 		}
 		
 		/**
 		 * @inheritDoc
 		 */
 		public function set container(container:IContainer):void {
-			cl_resizerDelegate.container = container
+			resizerDelegate.container = container
 		}
 		
 		/**
 		 * @inheritDoc
 		 */
 		public function get container():IContainer {
-			return cl_resizerDelegate.container
+			return resizerDelegate.container
 		}
 		
 		/**
@@ -121,43 +166,50 @@ package airdock.impl.ui
 		 */
 		public function set sideCode(sideCode:int):void
 		{
-			cl_resizerDelegate.sideCode = sideCode
-			var maxSize:Rectangle = cl_resizerDelegate.maxSize, orientation:Rectangle = new Rectangle()
+			resizerDelegate.sideCode = sideCode
+			drawSide(sideCode)
+		}
+		
+		private function drawSide(sideCode:int):void 
+		{
+			var maxSize:Rectangle = resizerDelegate.maxSize;
 			if (PanelContainerSide.isComplementary(PanelContainerSide.LEFT, sideCode)) {	//horizontal
-				orientation.setTo(x, maxSize.y, 4, maxSize.height)
+				redraw(4, maxSize.height, sideCode);
 			}
 			else if(PanelContainerSide.isComplementary(PanelContainerSide.TOP, sideCode)) {	//vertical
-				orientation.setTo(maxSize.x, y, maxSize.width, 4)
+				redraw(maxSize.width, 4, sideCode);
 			}
-			else {
-				return;	//invalid side code - return
-			}
+		}
+		
+		private function redraw(width:Number, height:Number, sideCode:int):void
+		{
+			const handleHeight:int = 16;
+			const handleWidth:int = 8;
 			graphics.clear()
 			graphics.beginFill(0, 1)
-			graphics.drawRect(0, 0, orientation.width, orientation.height)
+			graphics.drawRect(0, 0, width, height)
 			switch(sideCode)
 			{
 				case PanelContainerSide.LEFT:
-					graphics.drawRect(orientation.width, ((orientation.height * 0.5) - 8), 8, 16);
+					graphics.drawRect(width, ((height * 0.5) - handleWidth), handleWidth, handleHeight);
 					break;
 				case PanelContainerSide.RIGHT:
-					graphics.drawRect(-8, ((orientation.height * 0.5) - 8), 8, 16);
+					graphics.drawRect(-handleWidth, ((height * 0.5) - handleWidth), handleWidth, handleHeight);
 					break;
 				case PanelContainerSide.TOP:
-					graphics.drawRect(((orientation.width * 0.5) - 8), orientation.height, 16, 8);
+					graphics.drawRect(((width * 0.5) - handleWidth), height, handleHeight, handleWidth);
 					break;
 				case PanelContainerSide.BOTTOM:
-					graphics.drawRect(((orientation.width * 0.5) - 8), -8, 16, 8);
+					graphics.drawRect(((width * 0.5) - handleWidth), -handleWidth, handleHeight, handleWidth);
 					break;	
 			}
 			graphics.endFill()
 		}
-		
 		/**
 		 * @inheritDoc
 		 */
 		public function set maxSize(size:Rectangle):void {
-			cl_resizerDelegate.maxSize = size
+			resizerDelegate.maxSize = size
 		}
 		
 		/**
@@ -178,7 +230,7 @@ package airdock.impl.ui
 		 * @inheritDoc
 		 */
 		public function get sideCode():int {
-			return cl_resizerDelegate.sideCode
+			return resizerDelegate.sideCode
 		}
 		
 		/**

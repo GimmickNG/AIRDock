@@ -9,6 +9,7 @@ package airdock.config
 	import airdock.interfaces.ui.IResizer;
 	import flash.display.DisplayObjectContainer;
 	import flash.display.NativeWindowInitOptions;
+	
 	/**
 	 * Base configuration class for creating a Docker instance.
 	 * @author	Gimmick

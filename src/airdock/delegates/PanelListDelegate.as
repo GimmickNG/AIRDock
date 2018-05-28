@@ -40,8 +40,8 @@ package airdock.delegates
 			return vec_panels[index];
 		}
 		
-		public function requestShow(panel:IPanel):Boolean {
-			return panel && dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SHOW_REQUESTED, panel, null, true, true))
+		public function requestShow(panels:Vector.<IPanel>):Boolean {
+			return panels && dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SHOW_REQUESTED, panels, null, true, true))
 		}
 		
 		/**
@@ -51,12 +51,12 @@ package airdock.delegates
 		 * 					A null IPanel instance indicates the entire container should take part in the drag-dock operation.
 		 * @return	A Boolean indicating whether the operation was a success. If the event was prevented via preventDefault(), false is returned.
 		 */
-		public function requestDrag(panel:IPanel):Boolean {
-			return dispatchEvent(new PanelContainerEvent(PanelContainerEvent.DRAG_REQUESTED, panel, null, true, true))
+		public function requestDrag(panels:Vector.<IPanel>):Boolean {
+			return dispatchEvent(new PanelContainerEvent(PanelContainerEvent.DRAG_REQUESTED, panels, null, true, true))
 		}
 		
-		public function requestRemove(panel:IPanel):Boolean {
-			return panel && dispatchEvent(new PanelContainerEvent(PanelContainerEvent.PANEL_REMOVE_REQUESTED, panel, null, true, true))
+		public function requestRemove(panels:Vector.<IPanel>):Boolean {
+			return panels && dispatchEvent(new PanelContainerEvent(PanelContainerEvent.PANEL_REMOVE_REQUESTED, panels, null, true, true))
 		}
 		
 		/**
@@ -66,8 +66,8 @@ package airdock.delegates
 		 * 					A null IPanel instance indicates the state toggle operation is to be applied to the entire container.
 		 * @return	A Boolean indicating whether the operation was a success. If the event was prevented via preventDefault(), false is returned.
 		 */
-		public function requestStateToggle(panel:IPanel):Boolean {
-			return dispatchEvent(new PanelContainerEvent(PanelContainerEvent.STATE_TOGGLE_REQUESTED, panel, null, true, true))
+		public function requestStateToggle(panels:Vector.<IPanel>):Boolean {
+			return dispatchEvent(new PanelContainerEvent(PanelContainerEvent.STATE_TOGGLE_REQUESTED, panels, null, true, true))
 		}
 		
 		public function removePanelAt(index:int):IPanel {

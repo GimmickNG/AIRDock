@@ -1,9 +1,7 @@
 package airdock.delegates 
 {
 	import airdock.enums.PanelContainerSide;
-	import airdock.events.DockEvent;
 	import airdock.interfaces.ui.IDockHelper;
-	import airdock.util.IPair;
 	import flash.desktop.NativeDragManager;
 	import flash.display.DisplayObject;
 	import flash.display.InteractiveObject;
@@ -26,53 +24,32 @@ package airdock.delegates
 		{
 			cl_dockHelper = dockHelper;
 			dct_dockTargets = new Dictionary(true)
-			dockHelper.addEventListener(NativeDragEvent.NATIVE_DRAG_DROP, acceptDragDrop, false, 0, true)
 			dockHelper.addEventListener(NativeDragEvent.NATIVE_DRAG_OVER, displayTargetsOnDrag, false, 0, true)
-		}
-		
-		public function addTarget(target:DisplayObject, side:int):void {
-			dct_dockTargets[target] = side;
+			dockHelper.addEventListener(NativeDragEvent.NATIVE_DRAG_DROP, displayTargetsOnDrag, false, 0, true)
 		}
 		
 		/**
-		 * Adds the targets specified to the list of all dock helper candidates/targets.
-		 * Each target is a key-value pair with the key as the target displayObject and the value as the side it represents.
-		 * In other words, the value is the side that a container or panel will be attached to when dropped on that target.
-		 * @param	targets	A Vector of key-value pairs with the key as the target displayObject and the value as the side which it represents.
-		 * @see	airdock.util.IPair
+		 * Adds the target specified to the list of all dock helper candidates/targets.
+		 * Each target is the target DisplayObject associated with the side it represents.
+		 * The side is the side that a container or panel will be attached to when dropped on the target.
+		 * @param	target	The target DisplayObject instance.
+		 * @param	side	The side(s) which the target is associated with as a String.
+		 * 					Multiple sides can be added as a string sequence of sides.
 		 */
-		public function addTargets(targets:Vector.<IPair>):void
-		{
-			for (var i:uint = 0; i < targets.length; ++i)
-			{
-				var target:IPair = targets[i];
-				if (target && target.key is DisplayObject && target.value !== null) {
-					addTarget(target.key as DisplayObject, int(target.value));
-				}
-			}
+		public function addTarget(target:DisplayObject, side:String):void {
+			dct_dockTargets[target] = side;
 		}
 		
 		public function removeTarget(target:DisplayObject):void {
 			delete dct_dockTargets[target];
 		}
 		
-		public function removeTargets(targets:Vector.<DisplayObject>):void
-		{
-			for (var i:uint = 0; i < targets.length; ++i)
-			{
-				var target:DisplayObject = targets[i] as DisplayObject
-				if(target) {
-					removeTarget(target)
-				}
-			}
-		}
-		
-		public function getSideFrom(dropTarget:DisplayObject):int
+		public function getSideFrom(dropTarget:DisplayObject):String
 		{
 			if(dropTarget in dct_dockTargets) {
-				return int(dct_dockTargets[dropTarget])
+				return String(dct_dockTargets[dropTarget])
 			}
-			return PanelContainerSide.FILL
+			return PanelContainerSide.STRING_FILL
 		}
 		
 		public function get targets():Vector.<DisplayObject>
@@ -84,25 +61,15 @@ package airdock.delegates
 			return targets;
 		}
 		
-		/**
-		 * Dispatches a DockEvent when the user has dropped the panel or container on any of the sprites of this object, prior to the end of the drag-dock action.
-		 */
-		private function acceptDragDrop(evt:NativeDragEvent):void
-		{
-			if (evt.clipboard.hasFormat(str_panelFormat) || evt.clipboard.hasFormat(str_containerFormat)) {
-				dispatchEvent(new DockEvent(DockEvent.DRAG_COMPLETING, evt.clipboard, evt.target as DisplayObject, true, true))
-			}
-		}
-		
 		private function displayTargetsOnDrag(evt:NativeDragEvent):void 
 		{
 			var currentTarget:InteractiveObject = evt.target as InteractiveObject
-			if (!(currentTarget in dct_dockTargets && (evt.clipboard.hasFormat(str_panelFormat) || evt.clipboard.hasFormat(str_containerFormat)))) {
-				return;
+			if ((currentTarget in dct_dockTargets && (evt.clipboard.hasFormat(str_panelFormat) || evt.clipboard.hasFormat(str_containerFormat))))
+			{
+				cl_dockHelper.hide()	//show only the current target
+				cl_dockHelper.show(new <DisplayObject>[currentTarget])
+				NativeDragManager.acceptDragDrop(currentTarget)
 			}
-			cl_dockHelper.hide();									//hides all the targets
-			cl_dockHelper.show(new <DisplayObject>[currentTarget])	//except the current one
-			NativeDragManager.acceptDragDrop(currentTarget)
 		}
 		
 		public function addEventListener(type:String, listener:Function, useCapture:Boolean = false, priority:int = 0, useWeakReference:Boolean = false):void {

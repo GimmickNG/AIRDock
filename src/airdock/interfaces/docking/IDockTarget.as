@@ -13,10 +13,11 @@ package airdock.interfaces.docking
 		 * Determines the side of the container to which the panel is to be added to, at the end of a drag-docking operation.
 		 * Acceptable values are located in the PanelContainerSide enumeration class.
 		 * @param	dropTarget	The target DisplayObject instance on which the user drops the panel just before the drag-docking operation is finished.
-		 * @return	The side of the current container to which the panel should be added to, as an integer.
+		 * @return	The side(s) of the current container to which the panel should be added to, as a String.
+		 * 			Multiple sides can be chained together, if desired.
 		 * @see	airdock.enums.PanelContainerSide
 		 */
-		function getSideFrom(dropTarget:DisplayObject):int;
+		function getSideFrom(dropTarget:DisplayObject):String;
 	}
 	
 }

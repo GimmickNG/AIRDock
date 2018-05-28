@@ -24,6 +24,13 @@ package airdock.impl
 		public function get containerFormat():String {
 			return "dps:container";
 		}
+		
+		/**
+		 * @inheritDoc
+		 */
+		public function get destinationFormat():String {
+			return "dps:destination";
+		}
 	}
 
 }
