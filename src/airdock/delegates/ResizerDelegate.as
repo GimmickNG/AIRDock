@@ -1,6 +1,8 @@
 package airdock.delegates 
 {
+	import airdock.enums.PanelContainerSide;
 	import airdock.events.PanelContainerEvent;
+	import airdock.events.ResizerEvent;
 	import airdock.interfaces.docking.IContainer;
 	import airdock.interfaces.ui.IResizer;
 	import flash.events.Event;
@@ -14,53 +16,30 @@ package airdock.delegates
 	{
 		private var i_sideCode:int;
 		private var b_dragging:Boolean;
+		private var cl_resizer:IResizer;
 		private var rect_maxSize:Rectangle;
-		private var cl_dispatcher:IResizer;
 		private var plc_container:IContainer;
 		public function ResizerDelegate(resizer:IResizer)
 		{
-			cl_dispatcher = resizer;
+			cl_resizer = resizer;
 			rect_maxSize = new Rectangle();
-		}
-		
-		/**
-		 * Signals that a resize for the dragging container (specified in the container property of this class) has occurred.
-		 */
-		public function dispatchResize():Boolean {
-			return dispatchEvent(new PanelContainerEvent(PanelContainerEvent.RESIZED, null, container, false, false))
 		}
 		
 		/**
 		 * Signals that a resize for the given container is going to be resized.
 		 * Can be canceled to prevent default action.
-		 * @param	container	The container which is going to be resized.
+		 * @param	sideSize	The new side size, which is usually the position that the resizer will be at.
 		 */
-		public function dispatchResizing():Boolean {
-			return dispatchEvent(new PanelContainerEvent(PanelContainerEvent.RESIZING, null, container, false, false))
+		public function requestResize(sideSize:Number):Boolean {
+			return dispatchEvent(new ResizerEvent(ResizerEvent.RESIZING, container, sideSize, sideCode, false, false))
 		}
 		
-		public function addEventListener(type:String, listener:Function, useCapture:Boolean = false, priority:int = 0, useWeakReference:Boolean = false):void {
-			cl_dispatcher.addEventListener(type, listener, useCapture, priority, useWeakReference);
-		}
-		
-		public function dispatchEvent(event:Event):Boolean {
-			return cl_dispatcher.dispatchEvent(event);
-		}
-		
-		public function hasEventListener(type:String):Boolean {
-			return cl_dispatcher.hasEventListener(type);
-		}
-		
-		public function removeEventListener(type:String, listener:Function, useCapture:Boolean = false):void {
-			cl_dispatcher.removeEventListener(type, listener, useCapture);
-		}
-		
-		public function willTrigger(type:String):Boolean {
-			return cl_dispatcher.willTrigger(type);
-		}
-		
-		public function getDragBounds():Rectangle {
-			return container.getBounds(cl_dispatcher.parent)
+		public function getDragBounds():Rectangle
+		{
+			var bounds:Rectangle = container.getBounds(cl_resizer.parent)
+			bounds.height = container.height	//since container overrides width and height
+			bounds.width = container.width		//set to the visible width and height
+			return bounds
 		}
 		
 		public function get isDragging():Boolean {
@@ -98,6 +77,25 @@ package airdock.delegates
 			}
 		}
 		
+		public function addEventListener(type:String, listener:Function, useCapture:Boolean = false, priority:int = 0, useWeakReference:Boolean = false):void {
+			cl_resizer.addEventListener(type, listener, useCapture, priority, useWeakReference);
+		}
+		
+		public function dispatchEvent(event:Event):Boolean {
+			return cl_resizer.dispatchEvent(event);
+		}
+		
+		public function hasEventListener(type:String):Boolean {
+			return cl_resizer.hasEventListener(type);
+		}
+		
+		public function removeEventListener(type:String, listener:Function, useCapture:Boolean = false):void {
+			cl_resizer.removeEventListener(type, listener, useCapture);
+		}
+		
+		public function willTrigger(type:String):Boolean {
+			return cl_resizer.willTrigger(type);
+		}
 	}
 
 }

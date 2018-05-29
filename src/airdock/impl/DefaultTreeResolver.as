@@ -10,8 +10,9 @@ package airdock.impl
 	/**
 	 * Default ITreeResolver implementation. 
 	 * 
-	 * Uses the implicit display list to resolve the relationships between containers and other display objects; 
-	 * an alternate implementation may involve using explicit parent references in IContainers for use by the resolver.
+	 * Uses the implicit display list to resolve relationships between containers and other display objects.
+	 * An alternate implementation may involve using explicit parent references in IContainers for use by the resolver.
+	 * For example, explicit parent references in IContainers, which are themselves IContainers.
 	 * 
 	 * @author	Gimmick
 	 * @see	airdock.interfaces.docking.ITreeResolver
@@ -105,9 +106,24 @@ package airdock.impl
 		/**
 		 * @inheritDoc
 		 */
-		public function findCommonParent(displayObject:DisplayObject, otherDisplayObject:DisplayObject):DisplayObjectContainer
+		public function findCommonParent(displayObjects:Vector.<DisplayObject>):DisplayObjectContainer
 		{
-			//case 1: otherDisplayObj is a parent of displayObj
+			if(!(displayObjects && displayObjects.length)) {
+				return null;
+			}
+			var commonParent:DisplayObjectContainer = (displayObjects.length && displayObjects[0]) as DisplayObjectContainer;
+			displayObjects.forEach(function findCommonParentForEach(item:DisplayObject, index:int, array:Vector.<DisplayObject>):void {
+				commonParent = findCommonParentInternal(item, commonParent);	//find common container of all panels
+			});
+			return commonParent
+		}
+		
+		protected function findCommonParentInternal(displayObject:DisplayObject, otherDisplayObject:DisplayObject):DisplayObjectContainer
+		{
+			/**
+			 * Case 1: otherDisplayObj is a parent of displayObj:
+				* Keep finding displayObj's parent until it is either null, or it matches otherDisplayObj
+			 */
 			var temp:DisplayObjectContainer = displayObject as DisplayObjectContainer
 			while(temp && temp != otherDisplayObject) {
 				temp = temp.parent
@@ -115,7 +131,11 @@ package airdock.impl
 			if(temp == otherDisplayObject) {
 				return temp
 			}
-			//case 2: displayObj is a parent of otherDisplayObj
+			
+			/**
+			 * Case 2: displayObj is a parent of otherDisplayObj
+				* Repeat as case 1, but with the order swapped
+			 */
 			temp = otherDisplayObject as DisplayObjectContainer
 			while(temp && temp != displayObject) {
 				temp = temp.parent
@@ -123,7 +143,14 @@ package airdock.impl
 			if(temp == displayObject) {
 				return temp
 			}
-			//case 3: they share a common parent
+			
+			/**
+			 * Case 3: They both share a common parent
+				* Check depths of both displayObjects, and equalize if necessary
+				* Repeatedly find the parents of both displayObjects until they are equal
+					* That is, they share a common parent
+				* If no common parent found, return null
+			 */
 			var parent:DisplayObject;
 			var dispDepth:int, otherDispDepth:int;
 			var tempDisp:DisplayObjectContainer = displayObject as DisplayObjectContainer;

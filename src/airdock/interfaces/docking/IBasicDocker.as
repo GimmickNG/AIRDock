@@ -2,10 +2,8 @@ package airdock.interfaces.docking
 {
 	import airdock.config.ContainerConfig;
 	import airdock.config.PanelConfig;
-	import airdock.util.IPair;
 	import flash.display.DisplayObjectContainer;
 	import flash.display.NativeWindow;
-	import flash.display.Stage;
 	import flash.events.IEventDispatcher;
 	
 	/**
@@ -16,26 +14,11 @@ package airdock.interfaces.docking
 	 */
 	public interface IBasicDocker extends IEventDispatcher
 	{
-		[Deprecated(replacement="airdock.interfaces.docking.IBasicDocker.addPanelToSideSequence", since="v0.3")]
-		/**
-		 * Integrates a panel into the given side of a container.
-		 * @deprecated	Deprecated since v0.3; use addPanelToSideSequence instead; this method will be removed in a future release.
-		 * 				As of v0.3, this is an alias for addPanelToSideSequence (with a single-length side)
-		 * 
-		 * @param	panel	The panel to move into a container.
-		 * @param	container	The container to move the panel into.
-		 * 						This must not have any containers below it, or else it may cease to function correctly.
-		 * @param	side	The side to which the panel should be attached to. 
-		 * 					If it is not FILL, or is not equal or complementary to the container's current side (if it has any), then a new container is automatically created for this panel.
-		 * @return	The container into which it has been integrated into.
-		 * 
-		 * @see	airdock.interfaces.docking.IBasicDocker#addPanelToSideSequence
-		 */
-		function movePanelToContainer(panel:IPanel, container:IContainer, side:int):IContainer
-		
 		/**
 		 * Integrates a panel into the given side sequence for a container.
-		 * @param	panel	The panel to move into a container.
+		 * Replaced the movePanelToContainer() method since v0.3.
+		 * 
+		 * @param	panel		The panel to move into a container.
 		 * @param	container	The container to move the panel into.
 		 * 						If the side is FILL, this must not have any containers below it, or else it may cease to function correctly.
 		 * @param	sideCode	The side sequence to which the panel must be attached to.
@@ -46,11 +29,31 @@ package airdock.interfaces.docking
 		function addPanelToSideSequence(panel:IPanel, container:IContainer, sideCode:String):IContainer;
 		
 		/**
-		 * Docks a given panel to its parked container.
-		 * @param	panel	The panel to dock.
-		 * @return	The parked container into which it has been shifted into.
+		 * Docks the panels supplied into the first panel's parked container.
+		 * 
+		 * @param	panels		The list of panels which are to be docked (by moving into the first panel's parked container.)
+		 * @param	container	The parent container of all the panels.
+		 * 						Can be null, if all the panels are to be added to the same level.
+		 * @return	The IContainer instance into which the panels supplied have been moved into.
+		 * 			This is (usually) the first panel's parked container, or null if no panels were passed.
 		 */
-		function dockPanel(panel:IPanel):IContainer;
+		function dockPanels(panels:Vector.<IPanel>, container:IContainer):IContainer;
+		
+		/**
+		 * Integrates a set of panels to the first panel's previous non-parked root container.
+		 * 
+		 * Integrating a panel is defined as moving a panel to a non-parked root container.
+		 * Such containers are usually those which have been created manually, by the user, on the Docker.
+		 * As a result, it is possible a panel may have never been integrated into such a container.
+		 * For example, if no containers were created manually, or if no panels were ever attached to such a container.
+		 * 
+		 * @param	panels		The list of panels which are to be integrated.
+		 * @param	container	The	(current) parent container of any of the panels, or all the panels (if they belong to the same container)
+		 * 						Can be null, if all the panels are to be added to the same level.
+		 * @return	The non-parked root container into which it has been shifted into.
+		 * 			It is possible that this may be null, if it were never added to a non-parked root container.
+		 */
+		function integratePanels(panels:Vector.<IPanel>, container:IContainer):IContainer;
 		
 		/**
 		 * Sets up the panel (by adding listeners and creating a window for it.)
@@ -60,7 +63,7 @@ package airdock.interfaces.docking
 		function setupPanel(panel:IPanel):void;
 		
 		/**
-		 * Unlinks the panel from this Docker instance. For this panel, any parked containers, windows, and listeners, if present, are unloaded.
+		 * Unlinks the panel from this Docker instance. For this panel, any parked containers, windows, and listeners, if present, are disposed of.
 		 * After unlinking a panel from the Docker instance, it is regarded as foreign with respect to the Docker, and will follow the cross docking policy attributed to it.
 		 * @param	panel	The panel which is to be unlinked from this Docker instance.
 		 */
@@ -69,7 +72,7 @@ package airdock.interfaces.docking
 		/**
 		 * Sets up basic listeners for a window. Some listeners which are attached include, but are not limited to:
 		 * * Automatically resizing any containers which may be present in the window's stage, and
-		 * * Preventing the window from being unloaded when the user closes it.
+		 * * Preventing the window from being disposed of when the user closes it.
 		 * @param	window	The window which is to have listeners attached to it.
 		 */
 		function setupWindow(window:NativeWindow):void
@@ -94,33 +97,35 @@ package airdock.interfaces.docking
 		function hidePanel(panel:IPanel):Boolean;
 		
 		/**
-		 * Adds a panel to the original window or container it was previously part of; if it was part of its parked container, its window is activated.
+		 * Makes a group of panels visible.
+		 * This is done by:
+			* Docking the panels to the parked container of the first panel in the group, (or)
+			* Integrating the panels to the previous non-parked root container of the first panel in the group.
+		 * In the first case, the window is activated; this is done if there is no parent container of the panels in the beginning.
 		 * Panels shown via this method are always brought in front of other panels (so as to not be obscured.)
-		 * Dispatches a PanelContainerStateEvent if the panel was previously not part of any visible container.
+		 * (Usually) dispatches a PanelContainerStateEvent if the panel was previously not part of any visible container.
+			* This depends on the implementation used.
 		 * 
 		 * Returns a Boolean indicating whether the panel was shown successfully or not.
-		 * The return value does not have the same meaning as the event dispatched; the event is dispatched if and only if there is a change in the visibility status of the panel.
+		 * The return value does not have the same meaning as the event dispatched; the event is dispatched if and only if there is a change in the visibility status of the panels.
 		 * The return value is more in line with that of the IContainer interface's showPanel() method.
 		 * 
-		 * @param	panel	The panel to show.
-		 * @return	A Boolean indicating whether the panel was shown successfully or not.
+		 * @param	panels	The list of panels to show, as a group.
+		 * 					Panels in a group are added to the same container.
+		 * 					This is regardless of whether they occupy different containers prior to calling this method or not.
+		 * @return	A Boolean indicating whether the panels were shown successfully or not.
 		 */
-		function showPanel(panel:IPanel):Boolean;
+		function showPanels(panels:Vector.<IPanel>):Boolean;
 		
 		/**
-		 * Returns a vector of pairs, where each key in the pair is a panel, and the corresponding value is the panel's original window.
-		 * @return	A vector of pairs, with keys as a panel and values as the panel's window, for each pair in the vector.
+		 * Returns the parked container for the given panel.
+		 * @param	panel	The panel to get the container of.
+		 * @return	The corresponding parked container for the panel.
 		 */
-		function getPanelWindows():Vector.<IPair>
+		function getPanelContainer(panel:IPanel):IContainer;
 		
 		/**
-		 * Returns a vector of pairs, where each key in the pair is a panel, and the corresponding value is the panel's parked container.
-		 * @return	A vector of pairs, with keys as a panel and values as the panel's parked container, for each pair in the vector.
-		 */
-		function getPanelContainers():Vector.<IPair>
-		
-		/**
-		 * Gets the window corresponding to a panel, as defined during the creation of a window, either automatically or when createWindow() was called.
+		 * Gets the window corresponding to a panel, as defined during the creation of a window, either automatically or when the createWindow() method was called.
 		 * @param	panel	The panel to get the window of.
 		 * @return	The corresponding window for the panel.
 		 */
@@ -187,7 +192,7 @@ package airdock.interfaces.docking
 		function set mainContainer(value:DisplayObjectContainer):void;
 		
 		/**
-		 * Gets or sets the cross docking policy for this Docker instance, as defined in the CrossDockingPolicy enumeration.
+		 * Gets and sets the cross docking policy for this Docker instance, as defined in the CrossDockingPolicy enumeration.
 		 * The cross docking policy decides what is to be done when a panel or container, 
 		 * which is foreign to the current Docker instance, is attached to a local (i.e. originating from the current Docker instance) panel or container, or has a panel attached to a local panel or container.
 		 * 
@@ -196,6 +201,26 @@ package airdock.interfaces.docking
 		 */
 		function get crossDockingPolicy():int;
 		function set crossDockingPolicy(policyFlags:int):void;
+		
+		/**
+		 * The default tree resolver for this Docker.
+		 * Used to retrieve the relationships between different containers and their children, which are including, but not limited to, panels.
+		 * 
+		 * For more details, please refer tothe ITreeResolver interface.
+		 * @see	airdock.interfaces.docking.ITreeResolver
+		 */
+		function get treeResolver():ITreeResolver
+		function set treeResolver(value:ITreeResolver):void;
+		
+		/**
+		 * Gets and sets the dock format used during a drag-dock operation.
+		 * The dock format specifies the format strings used in a drag-dock operation's Clipboard instance.
+		 * 
+		 * For more details, please refer to the IDockFormat interface.
+		 * @see	airdock.interfaces.docking.IDockformat
+		 */
+		function get dockFormat():IDockFormat;
+		function set dockFormat(value:IDockFormat):void
 	}
 	
 }

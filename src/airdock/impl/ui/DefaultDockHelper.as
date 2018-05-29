@@ -2,23 +2,14 @@ package airdock.impl.ui
 {
 	import airdock.delegates.DockHelperDelegate;
 	import airdock.enums.PanelContainerSide;
-	import airdock.events.DockEvent;
-	import airdock.interfaces.docking.IDockTarget;
+	import airdock.interfaces.ui.IDockTarget;
 	import airdock.interfaces.ui.IDockHelper;
-	import airdock.util.IPair;
-	import airdock.util.StaticPair;
 	import flash.desktop.NativeDragManager;
 	import flash.display.DisplayObject;
 	import flash.display.Graphics;
 	import flash.display.Sprite;
 	import flash.events.NativeDragEvent;
 
-	/**
-	 * Dispatched when the user has dropped the panel or container onto the dock target, and the Docker is to decide what action to take.
-	 * @eventType	airdock.events.DockEvent.DRAG_COMPLETING
-	 */
-	[Event(name="deDragCompleting", type="airdock.events.DockEvent")]
-	
 	/**
 	 * Default IDockHelper implementation. 
 	 * 
@@ -49,17 +40,18 @@ package airdock.impl.ui
 			addChild(spr_bottomShape)
 			addChild(spr_centerShape)
 			
-			cl_helperDelegate = new DockHelperDelegate(this)
-			cl_helperDelegate.addTargets(new <IPair>[
-				new StaticPair(spr_leftShape, PanelContainerSide.LEFT), new StaticPair(spr_rightShape, PanelContainerSide.RIGHT), 
-				new StaticPair(spr_topShape, PanelContainerSide.TOP), new StaticPair(spr_bottomShape, PanelContainerSide.BOTTOM), new StaticPair(spr_centerShape, PanelContainerSide.FILL)
-			]);
+			cl_helperDelegate = new DockHelperDelegate(this);
+			var targets:Vector.<DisplayObject> = new <DisplayObject>[spr_topShape, spr_leftShape, spr_rightShape, spr_bottomShape, spr_centerShape];
+			var sides:Vector.<String> = new <String>[PanelContainerSide.STRING_TOP, PanelContainerSide.STRING_LEFT, PanelContainerSide.STRING_RIGHT, PanelContainerSide.STRING_BOTTOM, PanelContainerSide.STRING_FILL];
+			targets.forEach(function addTargetsToDelegate(target:DisplayObject, index:int, array:Vector.<DisplayObject>):void {
+				cl_helperDelegate.addTarget(target, sides[index]);
+			});
 		}
 		
 		/**
 		 * @inheritDoc
 		 */
-		public function getSideFrom(dropTarget:DisplayObject):int {
+		public function getSideFrom(dropTarget:DisplayObject):String {
 			return cl_helperDelegate.getSideFrom(dropTarget);
 		}
 		
@@ -69,11 +61,14 @@ package airdock.impl.ui
 		 */
 		public function hide(targets:Vector.<DisplayObject> = null):void
 		{
-			if (!targets) {
-				spr_centerShape.alpha = spr_leftShape.alpha = spr_rightShape.alpha = spr_bottomShape.alpha = spr_topShape.alpha = 0
+			if (targets)
+			{
+				targets.forEach(function hideAllTargets(item:DisplayObject, index:int, array:Vector.<DisplayObject>):void {
+					item.alpha = 0.0;
+				});
 			}
-			else for (var i:uint = 0; i < targets.length; ++i) {
-				targets[i].alpha = 0.0;
+			else {
+				spr_centerShape.alpha = spr_leftShape.alpha = spr_rightShape.alpha = spr_bottomShape.alpha = spr_topShape.alpha = 0
 			}
 		}
 		
@@ -82,11 +77,14 @@ package airdock.impl.ui
 		 */
 		public function show(targets:Vector.<DisplayObject> = null):void
 		{
-			if (!targets) {
-				spr_centerShape.alpha = spr_leftShape.alpha = spr_rightShape.alpha = spr_bottomShape.alpha = spr_topShape.alpha = 1
+			if (targets)
+			{
+				targets.forEach(function showAllTargets(item:DisplayObject, index:int, array:Vector.<DisplayObject>):void {
+					item.alpha = 1.0;
+				});
 			}
-			else for (var i:uint = 0; i < targets.length; ++i) {
-				targets[i].alpha = 1.0;
+			else {
+				spr_centerShape.alpha = spr_leftShape.alpha = spr_rightShape.alpha = spr_bottomShape.alpha = spr_topShape.alpha = 1
 			}
 		}
 		

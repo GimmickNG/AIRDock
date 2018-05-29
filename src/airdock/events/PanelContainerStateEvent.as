@@ -35,9 +35,9 @@ package airdock.events
 		
 		private var b_afterState:Boolean;
 		private var b_beforeState:Boolean;
-		public function PanelContainerStateEvent(type:String, panel:IPanel = null, container:IContainer = null, beforeDisplayState:Boolean = PanelContainerState.INTEGRATED, afterDisplayState:Boolean = PanelContainerState.INTEGRATED, bubbles:Boolean = false, cancelable:Boolean = false) 
+		public function PanelContainerStateEvent(type:String, panels:Vector.<IPanel> = null, container:IContainer = null, beforeDisplayState:Boolean = PanelContainerState.INTEGRATED, afterDisplayState:Boolean = PanelContainerState.INTEGRATED, bubbles:Boolean = false, cancelable:Boolean = false) 
 		{ 
-			super(type, panel, container, bubbles, cancelable);
+			super(type, panels, container, bubbles, cancelable);
 			b_beforeState = beforeDisplayState
 			b_afterState = afterDisplayState
 		} 
@@ -46,7 +46,7 @@ package airdock.events
 		 * @inheritDoc
 		 */
 		override public function clone():Event {
-			return new PanelContainerStateEvent(type, relatedPanel, relatedContainer, beforeDisplayState, afterDisplayState, bubbles, cancelable);
+			return new PanelContainerStateEvent(type, relatedPanels, relatedContainer, beforeDisplayState, afterDisplayState, bubbles, cancelable);
 		} 
 		
 		/**

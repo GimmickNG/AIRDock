@@ -14,6 +14,15 @@ package airdock.enums
 		 * No restrictions on docking. 
 		 * Panels from the Docker with this policy can be attached to Dockers which allow incoming panels;
 		 * panels from other Dockers can be attached to containers originating from the Docker with this policy.
+		 * 
+		 * NOTE: This mode is experimental.
+			* It is recommended not to use more than one Docker in the same application.
+			* However, if more than one Docker is used, impose a crossDockingPolicy on either one of them.
+		 * 
+		 * Known bugs with this mode include:
+			* Foreign panels "sticking" to the same container when docked in a foreign container.
+			* This is because the foreign Docker cannot handle the drag event, and yet is unreachable by the source Docker.
+			* As a result, no Docker is willing to handle the drag event, causing the panels to become "stuck" in the same position.
 		 */
 		public static const UNRESTRICTED:int = 0;
 		
@@ -30,7 +39,7 @@ package airdock.enums
 		public static const REJECT_INCOMING:int = 2;
 		
 		/**
-		 * Alias for (PREVENT_OUTGOING | REJECT_INCOMIN);
+		 * Alias for (PREVENT_OUTGOING | REJECT_INCOMING);
 		 * in effect, prevents panels from other Dockers being attached to containers originating from the current Docker 
 		 * and prevents panels from this Docker from being attached to containers originating from other Dockers, regardless of their policies.
 		 */

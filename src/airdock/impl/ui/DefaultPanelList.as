@@ -2,9 +2,8 @@ package airdock.impl.ui
 {
 	import airdock.delegates.PanelListDelegate;
 	import airdock.enums.PanelContainerSide;
-	import airdock.events.DockEvent;
 	import airdock.events.PanelContainerEvent;
-	import airdock.interfaces.docking.IDockTarget;
+	import airdock.interfaces.ui.IDockTarget;
 	import airdock.interfaces.docking.IPanel;
 	import airdock.interfaces.ui.IDisplayablePanelList;
 	import flash.desktop.NativeDragManager;
@@ -19,12 +18,6 @@ package airdock.impl.ui
 	import flash.geom.Point;
 	import flash.geom.Rectangle;
 	import flash.text.TextField;
-	
-	/**
-	 * Dispatched when the user has dropped the panel or container onto a tab, and the Docker is to decide what action to take.
-	 * @eventType	airdock.events.DockEvent.DRAG_COMPLETING
-	 */
-	[Event(name="deDragCompleting", type="airdock.events.DockEvent")]
 	
 	/**
 	 * Dispatched when the user has clicked on a tab and the corresponding panel is to be shown.
@@ -106,6 +99,7 @@ package airdock.impl.ui
 			
 			spr_removePanel = new Sprite()
 			addChild(spr_removePanel)
+			spr_removePanel.buttonMode = true;
 			
 			redraw(100, 100);
 			addEventListener(MouseEvent.CLICK, handlePanelListClick, false, 0, true)
@@ -129,9 +123,6 @@ package airdock.impl.ui
 		
 		private function startDispatchDrag(evt:MouseEvent):void 
 		{
-			if (evt.target is PanelTab && !cl_listDelegate.getPanelAt(vec_tabs.indexOf(evt.target as PanelTab)).dockable) {
-				return;
-			}
 			removeEventListener(MouseEvent.MOUSE_DOWN, startDispatchDrag)
 			addEventListener(MouseEvent.MOUSE_MOVE, dispatchDrag, false, 0, true)
 			addEventListener(MouseEvent.MOUSE_UP, stopDispatchDrag, false, 0, true)
@@ -139,11 +130,16 @@ package airdock.impl.ui
 		
 		private function dispatchDrag(evt:MouseEvent):void
 		{
-			var panel:IPanel;
-			if (evt.target is PanelTab) {
-				panel = cl_listDelegate.getPanelAt(vec_tabs.indexOf(evt.target as PanelTab));
-			}
-			cl_listDelegate.requestDrag(panel)
+			var panels:Vector.<IPanel> = new Vector.<IPanel>();
+			var dockAll:Boolean = !(evt.target is PanelTab);
+			const ACTIVATED:Boolean = PanelTab.ACTIVATED;
+			vec_tabs.forEach(function requestDrag(item:PanelTab, index:int, array:Vector.<PanelTab>):void
+			{
+				if(dockAll || item.activeState == ACTIVATED) {
+					panels.push(cl_listDelegate.getPanelAt(index));
+				}
+			});
+			cl_listDelegate.requestDrag(panels)
 			evt.stopImmediatePropagation()
 			stopDispatchDrag(evt)
 		}
@@ -165,6 +161,7 @@ package airdock.impl.ui
 				return;
 			}
 			cl_listDelegate.addPanelAt(panel, index)
+			
 			tab = new PanelTab()
 			tab.activatedColor = u_activatedColor
 			tab.deactivatedColor = u_deactivatedColor
@@ -202,36 +199,57 @@ package airdock.impl.ui
 		
 		private function handlePanelListClick(evt:MouseEvent):void
 		{
+			const ACTIVATED:Boolean = PanelTab.ACTIVATED;
 			if (evt.target is PanelTab)
 			{
+				var activeTabs:Vector.<PanelTab>
 				var panel:IPanel = cl_listDelegate.getPanelAt(vec_tabs.indexOf(evt.target as PanelTab));
-				if(cl_listDelegate.requestShow(panel)) {
+				if (evt.ctrlKey)
+				{
+					//holding down the Ctrl or Command key will allow the user to select multiple panels
+					//this is done by caching the active tabs before, and reactivating them after (since showPanel resets them)
+					activeTabs = vec_tabs.filter(function getActiveTabs(item:PanelTab, index:int, array:Vector.<PanelTab>):Boolean {
+						return item.activeState == ACTIVATED;
+					});
+				}
+				
+				if(cl_listDelegate.requestShow(new <IPanel>[panel])) {
 					showPanel(panel)
+				}
+				
+				if (activeTabs)
+				{
+					activeTabs.forEach(function activatePreviousTabs(item:PanelTab, index:int, array:Vector.<PanelTab>):void {
+						item.activate()
+					})
 				}
 			}
 			else if (evt.target == spr_removePanel)
 			{
-				for (var i:uint = 0; i < vec_tabs.length; ++i)
+				var panels:Vector.<IPanel> = new Vector.<IPanel>();
+				vec_tabs.forEach(function requestRemoveIfActive(item:PanelTab, index:int, array:Vector.<PanelTab>):void
 				{
-					if(vec_tabs[i].activeState == PanelTab.ACTIVATED) {
-						cl_listDelegate.requestRemove(cl_listDelegate.getPanelAt(i));
+					if(item.activeState == ACTIVATED) {
+						panels.push(cl_listDelegate.getPanelAt(index));
 					}
-				}
+				});
+				cl_listDelegate.requestRemove(panels);
 			}
 		}
 		
 		private function dispatchDock(evt:MouseEvent):void
 		{
-			var panel:IPanel;
-			if (evt.target is PanelTab) {
-				panel = cl_listDelegate.getPanelAt(vec_tabs.indexOf(evt.target as PanelTab));
-			}
-			//panel is null -> entire container; if panel is not null, check if it's dockable beforehand
-			if (panel && !panel.dockable) {
-				return;
-			}
+			var panels:Vector.<IPanel> = new Vector.<IPanel>();
+			var dockAll:Boolean = !(evt.target is PanelTab);
+			const ACTIVATED:Boolean = PanelTab.ACTIVATED;
+			vec_tabs.forEach(function requestDock(item:PanelTab, index:int, array:Vector.<PanelTab>):void
+			{
+				if(dockAll || item.activeState == ACTIVATED) {
+					panels.push(cl_listDelegate.getPanelAt(index));
+				}
+			});
 			evt.stopImmediatePropagation()
-			cl_listDelegate.requestStateToggle(panel)
+			cl_listDelegate.requestStateToggle(panels)
 		}
 		
 		private function redraw(width:Number, height:Number):void 
@@ -346,10 +364,10 @@ package airdock.impl.ui
 			var index:int = cl_listDelegate.getPanelIndex(panel)
 			if (index != -1)
 			{
-				for (var i:uint = 0; i < vec_tabs.length; ++i) {
-					vec_tabs[i].deactivate()
-				}
-				vec_tabs[index].activate()
+				vec_tabs.forEach(function deactivateAllTabs(item:PanelTab, index:int, array:Vector.<PanelTab>):void {
+					item.deactivate();
+				});
+				vec_tabs[index].activate();
 				tf_panelName.text = panel.panelName || "";
 			}
 		}

@@ -4,6 +4,7 @@ package airdock.enums
 	
 	/**
 	 * The enumeration class which dictates the sides to which containers attach to.
+	 * NOTE: The integer constants of this class may be abandoned in favor of the string constants in a future release.
 	 * @author	Gimmick
 	 */
 	public final class PanelContainerSide

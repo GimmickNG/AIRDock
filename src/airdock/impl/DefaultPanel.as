@@ -2,7 +2,7 @@ package airdock.impl
 {
 	import airdock.delegates.PanelDelegate;
 	import airdock.enums.PanelContainerState;
-	import airdock.events.PanelPropertyChangeEvent;
+	import airdock.events.PropertyChangeEvent;
 	import airdock.interfaces.display.IDisplayFilter;
 	import airdock.interfaces.docking.IPanel;
 	import flash.display.DisplayObject;
@@ -15,16 +15,23 @@ package airdock.impl
 	import flash.geom.Point;
 	
 	/**
-	 * Dispatched when any of the listed panel's attributes have been changed:
+	 * Dispatched after a PROPERTY_CHANGING event has been dispatched, and if it has not been prevented, causing the related property to change.
+	 * @eventType	airdock.events.PropertyChangeEvent.PROPERTY_CHANGED
+	 */
+	[Event(name="pchPropertyChange", type="airdock.events.PropertyChangeEvent")]
+	
+	/**
+	 * Dispatched when any of the current panel's attributes are about to be changed:
 	 * * color
 	 * * dockable
 	 * * resizable
 	 * * width
 	 * * height
 	 * * panelName
-	 * @eventType	airdock.events.PanelPropertyChangeEvent.PROPERTY_CHANGED
+	 * This is done to notify its container's IPanelList instance, amongst others, to update, in order to reflect the change in the panel's property.
+	 * @eventType	airdock.events.PropertyChangeEvent.PROPERTY_CHANGING
 	 */
-	[Event(name="ppcPropertyChange", type="airdock.events.PanelPropertyChangeEvent")]
+	[Event(name="pchPropertyChanging", type="airdock.events.PropertyChangeEvent")]
 	
 	/**
 	 * Default IPanel implementation. Is a container with a background color which can be changed on demand.

@@ -1,4 +1,4 @@
-package airdock.interfaces.docking 
+package airdock.interfaces.ui 
 {
 	import airdock.interfaces.display.IDisplayObjectContainer;
 	import flash.display.DisplayObject;

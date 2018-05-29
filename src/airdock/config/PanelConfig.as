@@ -12,6 +12,7 @@ package airdock.config
 		private var num_height:Number;
 		private var b_resizable:Boolean;
 		private var b_dockable:Boolean;
+		
 		/**
 		 * Creates a new panel configuration instance.
 		 * By default, panels are resizable and dockable unless explicitly set otherwise.

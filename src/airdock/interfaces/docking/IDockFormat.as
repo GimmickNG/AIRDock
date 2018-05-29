@@ -12,7 +12,14 @@ package airdock.interfaces.docking
 		 * The string key for storing panels in the clipboard.
 		 */
 		function get panelFormat():String;
+		/**
+		 * The string key for storing the panels' container in the clipboard.
+		 */
 		function get containerFormat():String;
+		/**
+		 * The string key for storing the destination container in the clipboard.
+		 */
+		function get destinationFormat():String;
 	}
 	
 }

@@ -53,15 +53,17 @@ package airdock.enums
 			options.dockFormat = new DOCK_FORMAT() as IDockFormat
 			options.resizeHelper = new RESIZER() as IResizer
 			options.mainContainer = mainContainer
-			
 			var nativeWindowOptions:NativeWindowInitOptions = new NativeWindowInitOptions()
 			nativeWindowOptions.maximizable = nativeWindowOptions.minimizable = true
 			nativeWindowOptions.systemChrome = NativeWindowSystemChrome.STANDARD
 			nativeWindowOptions.type = NativeWindowType.UTILITY
 			nativeWindowOptions.transparent = false;
-			
-			options.defaultContainerOptions = new ContainerConfig()
 			options.defaultWindowOptions = nativeWindowOptions
+			
+			var containerOptions:ContainerConfig = new ContainerConfig()
+			containerOptions.width = containerOptions.height = 256;
+			options.defaultContainerOptions = containerOptions
+			
 			return options
 		}
 		

@@ -1,7 +1,7 @@
 package airdock.interfaces.ui 
 {
 	import airdock.interfaces.display.IDisplayObject;
-	import airdock.interfaces.docking.IDockTarget;
+	import airdock.interfaces.ui.IDockTarget;
 	import flash.display.DisplayObject;
 	import flash.events.IEventDispatcher;
 	
