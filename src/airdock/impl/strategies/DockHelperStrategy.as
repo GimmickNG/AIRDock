@@ -6,7 +6,7 @@ package airdock.impl.strategies
 	import airdock.interfaces.docking.IContainer;
 	import airdock.interfaces.docking.ICustomizableDocker;
 	import airdock.interfaces.docking.IDockFormat;
-	import airdock.interfaces.docking.IDragDockInformation;
+	import airdock.interfaces.docking.IDragDockFormat;
 	import airdock.interfaces.docking.ITreeResolver;
 	import airdock.interfaces.strategies.IDockerStrategy;
 	import airdock.interfaces.ui.IDockHelper;
@@ -189,7 +189,7 @@ package airdock.impl.strategies
 				var clipBoard:Clipboard = evt.clipboard;
 				var targetContainer:IContainer = (evt.target as IContainer) || treeResolver.findParentContainer(evt.target as DisplayObject)
 				var clipboardContainer:IContainer = clipBoard.getData(dockFormat.containerFormat, ClipboardTransferMode.ORIGINAL_ONLY) as IContainer;
-				var dropContainerInfo:IDragDockInformation = clipBoard.getData(dockFormat.destinationFormat, ClipboardTransferMode.ORIGINAL_ONLY) as IDragDockInformation
+				var dropContainerInfo:IDragDockFormat = clipBoard.getData(dockFormat.destinationFormat, ClipboardTransferMode.ORIGINAL_ONLY) as IDragDockFormat
 				if (evt.currentTarget == dockHelper) {
 					dropContainerInfo.sideSequence = dockHelper.getSideFrom(evt.target as DisplayObject)
 				}

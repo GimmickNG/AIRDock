@@ -48,6 +48,16 @@ package airdock.interfaces.docking
 		function showPanel(panel:IPanel):Boolean;
 		
 		/**
+		 * Checks whether the panel is currently visible or not.
+		 * A panel is visible if it is currently being displayed ahead of all other panels in the container.
+		 * If the container does not contain the supplied panel, then the container recursively checks containers below it for whether it is visible or not.
+		 * 
+		 * @param	panel	The panel to check for visibility.
+		 * @return	A Boolean indicating whether the panel is currently visible or not.
+		 */
+		function isPanelVisible(panel:IPanel):Boolean;
+		
+		/**
 		 * Recursively searches for the container which contains the supplied panel.
 		 * @param	panel	The panel to search for, within the container or subcontainers of this container (if any).
 		 * @return	The container which contains the supplied panel. If the panel is not found, null is returned.

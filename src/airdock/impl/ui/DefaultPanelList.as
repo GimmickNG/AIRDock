@@ -3,7 +3,7 @@ package airdock.impl.ui
 	import airdock.delegates.PanelListDelegate;
 	import airdock.enums.PanelContainerSide;
 	import airdock.events.PanelContainerEvent;
-	import airdock.interfaces.docking.IDockTarget;
+	import airdock.interfaces.ui.IDockTarget;
 	import airdock.interfaces.docking.IPanel;
 	import airdock.interfaces.ui.IDisplayablePanelList;
 	import flash.desktop.NativeDragManager;

@@ -324,6 +324,31 @@ package airdock.impl
 			return false;
 		}
 		
+		/**
+		 * @inheritDoc
+		 */
+		public function isPanelVisible(panel:IPanel):Boolean
+		{
+			if(!panel) {
+				return false;
+			}
+			else if (panel.parent == this)
+			{
+				for (var i:int = numChildren - 1, currPanel:IPanel; !currPanel && i >= 0; --i) {
+					currPanel = getChildAt(i) as IPanel;	//gets topmost panel
+				}
+				return currPanel == panel;
+			}
+			else
+			{
+				var container:IContainer = findPanel(panel);
+				if(container) {
+					return container.isPanelVisible(panel);
+				}
+			}
+			return false;
+		}
+		
 		private function sendDockPanelRequest(evt:PanelContainerEvent):void
 		{
 			evt.stopImmediatePropagation();

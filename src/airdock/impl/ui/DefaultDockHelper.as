@@ -2,7 +2,7 @@ package airdock.impl.ui
 {
 	import airdock.delegates.DockHelperDelegate;
 	import airdock.enums.PanelContainerSide;
-	import airdock.interfaces.docking.IDockTarget;
+	import airdock.interfaces.ui.IDockTarget;
 	import airdock.interfaces.ui.IDockHelper;
 	import flash.desktop.NativeDragManager;
 	import flash.display.DisplayObject;

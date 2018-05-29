@@ -9,6 +9,7 @@ package airdock
 	import airdock.events.PanelContainerEvent;
 	import airdock.events.PanelContainerStateEvent;
 	import airdock.events.PropertyChangeEvent;
+	import airdock.interfaces.docking.IBasicDocker;
 	import airdock.interfaces.strategies.IDockerStrategy;
 	import airdock.util.IDisposable;
 	import airdock.interfaces.docking.IContainer;
@@ -180,7 +181,7 @@ package airdock
 			
 			addEventListener(PropertyChangeEvent.PROPERTY_CHANGED, applyPropertyChanges, false, 0, true);
 			vec_dockStrategies.forEach(function setupStrategies(item:IDockerStrategy, index:int, array:Vector.<IDockerStrategy>):void {
-				item.setup(this);
+				item.setup(this as IBasicDocker);
 			}, this);
 		}
 		
@@ -281,7 +282,7 @@ package airdock
 			}
 			
 			panels = extractDockablePanels(panels)
-			if (evt.isDefaultPrevented() || evt.dropAction == NativeDragActions.NONE)
+			if (evt.dropAction == NativeDragActions.NONE)
 			{
 				window = getContainerWindow(dockPanels(panels, container))
 				if (window)
@@ -520,10 +521,8 @@ package airdock
 			}
 			var panels:Vector.<IPanel> = clipBoard.getData(dockFormat.panelFormat, ClipboardTransferMode.ORIGINAL_ONLY) as Vector.<IPanel>
 			var container:IContainer = clipBoard.getData(dockFormat.containerFormat, ClipboardTransferMode.ORIGINAL_ONLY) as IContainer || findCommonContainer(panels)
-			if (violatesIncomingCrossPolicy(crossDockingPolicy, container))
-			{
-				evt.preventDefault();			//prevent the event and hence roll back docking process
-				evt.stopImmediatePropagation();	//halt further action in this (destination) Docker instance
+			if (violatesIncomingCrossPolicy(crossDockingPolicy, container)) {
+				evt.dropAction = NativeDragActions.NONE;	//set the drop action to NONE so that it won't commit the operation
 			}
 		}
 		
@@ -537,9 +536,10 @@ package airdock
 			var container:IContainer = clipBoard.getData(dockFormat.containerFormat, ClipboardTransferMode.ORIGINAL_ONLY) as IContainer || findCommonContainer(panels)
 			var dropContainerInfo:DragDockContainerInformation = clipBoard.getData(dockFormat.destinationFormat, ClipboardTransferMode.ORIGINAL_ONLY) as DragDockContainerInformation
 			if (violatesOutgoingCrossPolicy(crossDockingPolicy, dropContainerInfo.destinationContainer)) {
-				evt.preventDefault();	//prevent the event and hence roll back docking process
+				evt.dropAction = NativeDragActions.NONE;	//prevent the event and hence roll back docking process
 			}
 		}
+		
 		/**
 		 * Adds the container to the list of containers created by this Docker instance, and marks it as local, i.e. non-foreign.
 		 */
@@ -687,47 +687,6 @@ package airdock
 					container.panelList = null;
 				}
 			}
-		}
-		
-		/**
-		 * Docks the panels supplied into the first panel's parked container.
-		 * Recursively empties the first panel's container if it is occupied.
-		 * 
-		 * @param	panels			The list of panels which are to be docked (by moving into the first panel's parked container.)
-		 * @param	parentContainer	The parent container of all the panels.
-		 * @return	The IContainer instance into which the panels supplied have been moved into.
-		 * 			This is the first panel's parked container, or null if no panels were passed.
-		 */
-		private function dockPanels(panels:Vector.<IPanel>, parentContainer:IContainer):IContainer
-		{
-			/* Procedure:
-				* Get the (first panel in panels)'s container as firstContainer
-				* Move all the panels into firstContainer
-				* Special case: If some panels already exist in firstContainer, which are not in panels:
-					* Move them to the container of their first panel:
-						* Find the panels in firstContainer which are NOT in panels as preExistingPanels
-						* Call dockPanels() recursively on preExistingPanels
-			 * Note: If all the panels are removed from the container, the container must also be removed
-				* This is handled by the removeContainerIfEmpty() method.
-			 */
-			var dockablePanels:Vector.<IPanel> = extractDockablePanels(panels);
-			if(!(dockablePanels && dockablePanels.length)) {
-				return null;
-			}
-			var panelPairs:Vector.<PanelSideSequence> = extractOrderedPanelSideCodes(dockablePanels, parentContainer);
-			var firstContainer:IContainer = getPanelContainer(panelPairs[0].key as IPanel);	//first panel's parked container will have all the other panels moved into it
-			
-			var preExistingPanels:Vector.<IPanel> = firstContainer.getPanels(true).filter(function getPanelsDifference(item:IPanel, index:int, array:Vector.<IPanel>):Boolean {
-				return item && dockablePanels.indexOf(item) == -1;	//exclude panels which are going to be moved to this container
-			});
-			dockPanels(preExistingPanels, firstContainer)	//recursively empty the first panel's parked container by calling dockPanels() on it
-			
-			if (parentContainer != firstContainer)
-			{
-				shadowContainer(parentContainer, firstContainer)
-				movePanelsIntoContainer(panelPairs, firstContainer)
-			}
-			return firstContainer;
 		}
 		
 		/**
@@ -1073,71 +1032,115 @@ package airdock
 		}
 		
 		/**
+		 * Recursively empties the first panel's container if it is occupied.
 		 * @inheritDoc
 		 */
-		public function dockPanel(panel:IPanel):IContainer {
-			return dockPanels(new <IPanel>[panel], treeResolver.findParentContainer(panel as DisplayObject));
-		}
-		
-		/**
-		 * @inheritDoc
-		 */
-		public function integratePanel(panel:IPanel):IContainer
+		public function dockPanels(panels:Vector.<IPanel>, parentContainer:IContainer):IContainer
 		{
-			var sideInfo:PanelStateInformation = getPanelStateInfo(panel);
-			return addPanelToSideSequence(panel, sideInfo.previousRoot, sideInfo.integratedCode)
+			/* Procedure:
+				* Get the (first panel in panels)'s parked container as firstContainer
+				* Move all the panels into firstContainer
+				* Special case: If some panels already exist in firstContainer, which are not in panels:
+					* Move them to the container of their first panel:
+						* Find the panels in firstContainer which are NOT in panels as preExistingPanels
+						* Call dockPanels() recursively on preExistingPanels
+			 * Note: If all the panels are removed from the container, the container must also be removed
+				* This is handled by the removeContainerIfEmpty() method.
+			 */
+			var dockablePanels:Vector.<IPanel> = extractDockablePanels(panels);
+			if(!(dockablePanels && dockablePanels.length)) {
+				return null;
+			}
+			var panelPairs:Vector.<PanelSideSequence> = extractOrderedPanelSideCodes(dockablePanels, parentContainer);
+			var firstContainer:IContainer = getPanelContainer(panelPairs[0].key as IPanel);	//first panel's parked container will have all the other panels moved into it
+			
+			var preExistingPanels:Vector.<IPanel> = firstContainer.getPanels(true).filter(function getPanelsDifference(item:IPanel, index:int, array:Vector.<IPanel>):Boolean {
+				return item && dockablePanels.indexOf(item) == -1;	//exclude panels which are going to be moved to this container
+			});
+			dockPanels(preExistingPanels, firstContainer)	//recursively empty the first panel's parked container by calling dockPanels() on it
+			
+			if (parentContainer != firstContainer)
+			{
+				shadowContainer(parentContainer, firstContainer)
+				movePanelsIntoContainer(panelPairs, firstContainer)
+			}
+			return firstContainer;
 		}
 		
 		/**
-		 * Makes the panel supplied in the parameter visible, and dispatches a PanelContainerStateEvent if it was previously hidden.
+		 * @inheritDoc
+		 */
+		public function integratePanels(panels:Vector.<IPanel>, parentContainer:IContainer):IContainer
+		{
+			/* Structurally similar to the dockPanels() method.
+			 * The only difference is that this method does not care if previous root is occupied.
+			 * Procedure:
+				* Get the (first panel in panels)'s previous root container as firstContainer
+				* Move all the panels into firstContainer
+			 * Note: If all the panels are removed from the container, the container must also be removed
+				* This is handled by the removeContainerIfEmpty() method.
+			 */
+			var dockablePanels:Vector.<IPanel> = extractDockablePanels(panels);
+			if(!(dockablePanels && dockablePanels.length)) {
+				return null;
+			}
+			var panelPairs:Vector.<PanelSideSequence> = extractOrderedPanelSideCodes(dockablePanels, parentContainer);
+			var sideInfo:PanelStateInformation = getPanelStateInfo(panelPairs[0].panel);
+			var firstContainer:IContainer = resolveContainerSideSequence(sideInfo.previousRoot, sideInfo.integratedCode);
+			if(!firstContainer) {
+				return null;
+			}
+			movePanelsIntoContainer(panelPairs, firstContainer);
+			return firstContainer;
+		}
+		
+		/**
+		 * Makes the panels supplied in the parameter visible, and dispatches a PanelContainerStateEvent if it was previously hidden.
 		 * No event is dispatched if the panel supplied was already visible prior to calling the function.
 		 * @inheritDoc
 		 */
-		public function showPanel(panel:IPanel):Boolean
+		public function showPanels(panels:Vector.<IPanel>):Boolean
 		{
-			if (!panel) {
+			if (!(panels && panels.length)) {
 				return false;
 			}
-			var container:IContainer = treeResolver.findParentContainer(panel as DisplayObject)
+			panels = extractDockablePanels(panels);
+			var panel:IPanel = panels[0];
 			var changeOccurred:Boolean = true;
-			/**
-			 * Flag to decide whether to move the container to the previous root.
-			 * This is done because a container which is docked (i.e. panel belongs to a parked container) can be activated.
-			 * However, an invisible container has to either be added to another container, or the panels moved to their previous roots.
-			 */
-			var moveToPreviousRoot:Boolean = getAuthoritativeContainerState(container) != PanelContainerState.DOCKED;	//move to the previous root if the container is not docked
-			if (container)
-			{
-				if (isForeignContainer(container)) {
-					return false;	//do not attempt to show panel for external/foreign containers
-				}
-				else if (!moveToPreviousRoot)
-				{
-					var window:NativeWindow = getContainerWindow(container);
-					changeOccurred = !window.visible;
-					container.showPanel(panel)
-					window.activate()
-				}
+			var container:IContainer = treeResolver.findParentContainer(panel as DisplayObject);
+			if (container && isForeignContainer(container)) {
+				return false;	//do not attempt to show panel for external/foreign containers
 			}
-			
-			if (moveToPreviousRoot || !container)
+			else if (!container || getAuthoritativeContainerState(container) == PanelContainerState.DOCKED)
+			{
+				if (!container) {
+					dockPanels(panels, null);
+				}
+				/* Panels are part of a parked container now
+				 * Show the window and the panel along with it */
+				var window:NativeWindow = getContainerWindow(container);
+				changeOccurred = !window.visible;
+				container.showPanel(panel)
+				window.activate()
+			}
+			else
 			{
 				var sideInfo:PanelStateInformation = getPanelStateInfo(panel)
 				var previousRoot:IContainer = sideInfo.previousRoot
-				changeOccurred = previousRoot && previousRoot != treeResolver.findRootContainer(container)
-				if (changeOccurred || !panel.dockable) {
-					addPanelToSideSequence(panel, previousRoot, sideInfo.integratedCode)
+				var newRoot:IContainer = previousRoot && integratePanels(panels, previousRoot)
+				if(!newRoot) {
+					return false;
 				}
-				else {
-					dockPanels(new <IPanel>[panel], container);	//dock panel by default, if it supports docking
-				}
+				changeOccurred = previousRoot != newRoot
 			}
-			
 			var newParent:IContainer = treeResolver.findParentContainer(panel as DisplayObject);
 			if (changeOccurred) {
-				dispatchEvent(new PanelContainerStateEvent(PanelContainerStateEvent.VISIBILITY_TOGGLED, new <IPanel>[panel], newParent, PanelContainerState.INVISIBLE, PanelContainerState.VISIBLE, false, false));
+				dispatchEvent(new PanelContainerStateEvent(PanelContainerStateEvent.VISIBILITY_TOGGLED, panels, newParent, PanelContainerState.INVISIBLE, PanelContainerState.VISIBLE, false, false));
 			}
-			return newParent.showPanel(panel)
+			var success:Boolean = !!newParent && panels.every(function showAllPanels(item:IPanel, index:int, array:Vector.<IPanel>):Boolean {
+				return newParent.showPanel(item);
+			});
+			return success;
 		}
 		
 		/**
@@ -1169,14 +1172,13 @@ package airdock
 		 */
 		public function isPanelVisible(panel:IPanel):Boolean
 		{
-			var container:IContainer = treeResolver.findParentContainer(panel as DisplayObject);
-			if (!container || isForeignContainer(container)) {
+			var parentContainer:IContainer = treeResolver.findParentContainer(panel as DisplayObject);
+			var rootContainer:IContainer = treeResolver.findRootContainer(parentContainer);
+			if (!rootContainer || isForeignContainer(rootContainer)) {
 				return false;
 			}
-			else if (container == getContainerFromPanel(panel, false)) {
-				return getContainerWindow(container).visible;
-			}
-			return container.stage != null;
+			var window:NativeWindow = getContainerWindow(rootContainer);
+			return (window && window.visible) && rootContainer.isPanelVisible(panel);
 		}
 		
 		/**
@@ -1530,23 +1532,23 @@ package airdock
 		{
 			if (!(config && config.mainContainer && config.defaultWindowOptions && config.treeResolver))
 			{
-				var reason:String = "Invalid options: "
+				var reason:Vector.<String> = new <String>["Invalid options:"]
 				if (!config) {
-					reason += "Options must be non-null."
+					reason.push("Options must be non-null.")
 				}
 				else 
 				{
 					if (!config.mainContainer) {
-						reason += "Option mainContainer must be a non-null value. ";
+						reason.push("Option mainContainer must be a non-null value.");
 					}
 					if (!config.defaultWindowOptions) {
-						reason += "Option defaultWindowOptions must be a non-null value. ";
+						reason.push("Option defaultWindowOptions must be a non-null value.");
 					}
 					if (!config.treeResolver) {
-						reason += "Option treeResolver must be a non-null value. ";
+						reason.push("Option treeResolver must be a non-null value.");
 					}
 				}
-				throw new ArgumentError(reason)
+				throw new ArgumentError(reason.join("\n"))
 			}
 			else if (!isSupported) {
 				throw new IllegalOperationError("Error: AIRDock is not supported on the current system.");
@@ -1577,7 +1579,7 @@ package airdock
 }
 
 import airdock.interfaces.docking.IContainer;
-import airdock.interfaces.docking.IDragDockInformation;
+import airdock.interfaces.docking.IDragDockFormat;
 import airdock.interfaces.docking.IPanel;
 import airdock.util.IPair;
 import flash.display.Stage;
@@ -1659,7 +1661,7 @@ internal class PanelStateInformation
 /**
  * The class containing information about the container which is to receive a panel or container near the end of a drag-dock operation.
  */
-internal class DragDockContainerInformation implements IDragDockInformation
+internal class DragDockContainerInformation implements IDragDockFormat
 {
 	private var str_sideSequence:String
 	private var plc_destination:IContainer
