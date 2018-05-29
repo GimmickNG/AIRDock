@@ -9,23 +9,31 @@ package
 	import airdock.enums.CrossDockingPolicy;
 	import airdock.events.PanelContainerEvent;
 	import airdock.config.PanelConfig;
+	import airdock.impl.DefaultPanel;
 	import airdock.impl.DefaultTreeResolver;
+	import airdock.impl.filters.BorderFilter;
+	import airdock.util.IDisposable;
+	import airdock.interfaces.display.IDisplayFilter;
 	import airdock.interfaces.docking.IBasicDocker;
 	import airdock.interfaces.docking.IPanel;
 	import airdock.interfaces.docking.IContainer;
 	import airdock.interfaces.docking.ICustomizableDocker;
 	import airdock.interfaces.factories.IContainerFactory;
+	import airdock.util.IPair;
+	import flash.desktop.NativeApplication;
 	import flash.display.DisplayObject;
 	import flash.display.Sprite;
 	import flash.display.StageAlign;
 	import flash.display.StageScaleMode;
 	import flash.events.Event;
+	import flash.events.NativeDragEvent;
 	import flash.events.NativeWindowBoundsEvent;
 	import flash.text.TextField;
 	import flash.utils.getTimer;
+	import flash.utils.setTimeout;
 	
 	/**
-	 * Sample class showing how to use AIRDock. This class creates two Dockers.
+	 * ...
 	 * @author Gimmick
 	 */
 	public class DockingTest extends Sprite 
@@ -42,7 +50,6 @@ package
 			addChild(localEnvironment)
 			addChild(foreignEnvironment)
 			
-			options.dragImageWidth = options.dragImageHeight = 100;
 			rootContainerOptions.height = stage.stageHeight / 2;
 			rootContainerOptions.width = stage.stageWidth / 2;
 			stage.scaleMode = StageScaleMode.NO_SCALE
@@ -69,12 +76,14 @@ package
 			addChild(plc_local as DisplayObject)
 			addChild(plc_foreign as DisplayObject)
 			stage.nativeWindow.addEventListener(NativeWindowBoundsEvent.RESIZE, changeContainerSize)
+			//cl_foreignDocker.crossDockingPolicy = CrossDockingPolicy.REJECT_INCOMING
+			cl_localDocker.crossDockingPolicy = CrossDockingPolicy.PREVENT_OUTGOING
+			stage.nativeWindow.addEventListener(Event.CLOSING, closeAll)
 		}
 		
 		private function populateRoot(docker:IBasicDocker, rootContainer:IContainer, prefix:String):void
 		{
 			const reps:int = 6;
-			
 			var paneOptions:PanelConfig = new PanelConfig()
 			paneOptions.width = paneOptions.height = 300
 			var pane:IPanel = docker.createPanel(paneOptions)
@@ -102,23 +111,33 @@ package
 			plc_foreign.x = plc_foreign.width = plc_local.width = stage.stageWidth / 2;
 			plc_foreign.y = plc_foreign.height = plc_local.height = stage.stageHeight / 2;
 		}
+		
+		private function closeAll(evt:Event):void 
+		{
+			(cl_localDocker as IDisposable).dispose();
+			(cl_foreignDocker as IDisposable).dispose()
+		}
 	}
-	
 }
 
-import flash.display.*;
+import airdock.delegates.DockHelperDelegate;
+import airdock.enums.PanelContainerSide;
+import airdock.interfaces.ui.IDockTarget;
 import airdock.interfaces.ui.IDockHelper;
-import flash.events.*;
-import airdock.events.*;
-import flash.desktop.*;
-import airdock.enums.*;
+import flash.desktop.NativeDragManager;
+import flash.display.DisplayObject;
+import flash.display.Graphics;
+import flash.display.Sprite;
+import flash.events.NativeDragEvent;
+
 internal class GreenDockHelper extends Sprite implements IDockHelper
 {
-	private var spr_centerShape:Sprite
+	private var spr_centerShape:Sprite;
 	private var spr_leftShape:Sprite;
 	private var spr_rightShape:Sprite;
 	private var spr_topShape:Sprite;
 	private var spr_bottomShape:Sprite;
+	private var cl_helperDelegate:DockHelperDelegate;
 	public function GreenDockHelper() 
 	{
 		spr_leftShape = new Sprite()
@@ -133,56 +152,64 @@ internal class GreenDockHelper extends Sprite implements IDockHelper
 		addChild(spr_bottomShape)
 		addChild(spr_centerShape)
 		
-		addEventListener(NativeDragEvent.NATIVE_DRAG_DROP, acceptDragDrop)
-		addEventListener(NativeDragEvent.NATIVE_DRAG_OVER, displayDockHandlesOnDrag, false, 0, true)
+		cl_helperDelegate = new DockHelperDelegate(this)
+		var targets:Vector.<DisplayObject> = new <DisplayObject>[spr_topShape, spr_leftShape, spr_rightShape, spr_bottomShape, spr_centerShape];
+		var sides:Vector.<String> = new <String>[PanelContainerSide.STRING_TOP, PanelContainerSide.STRING_LEFT, PanelContainerSide.STRING_RIGHT, PanelContainerSide.STRING_BOTTOM, PanelContainerSide.STRING_FILL];
+		targets.forEach(function addTargetsToDelegate(target:DisplayObject, index:int, array:Vector.<DisplayObject>):void {
+			cl_helperDelegate.addTarget(target, sides[index]);
+		});
 	}
 	
-	private function acceptDragDrop(evt:NativeDragEvent):void {
-		dispatchEvent(new DockEvent(DockEvent.DRAG_COMPLETED, evt.clipboard, evt.target as DisplayObject, true, false))
+	/**
+	 * @inheritDoc
+	 */
+	public function getSideFrom(dropTarget:DisplayObject):String {
+		return cl_helperDelegate.getSideFrom(dropTarget);
 	}
 	
-	private function displayDockHandlesOnDrag(evt:NativeDragEvent):void 
+	
+	/**
+	 * @inheritDoc
+	 */
+	public function hide(targets:Vector.<DisplayObject> = null):void
 	{
-		//ignore events that are received by the currently dragging panel
-		var currentTarget:Sprite = evt.target as Sprite
-		hideAll()
-		currentTarget.alpha = 1
-		NativeDragManager.acceptDragDrop(currentTarget)
-	}
-	
-	public function getSideFrom(dropTarget:DisplayObject):int
-	{
-		switch(dropTarget)
+		if (targets)
 		{
-			case spr_bottomShape:
-				return PanelContainerSide.BOTTOM;
-			case spr_topShape:
-				return PanelContainerSide.TOP;
-			case spr_leftShape:
-				return PanelContainerSide.LEFT;
-			case spr_rightShape:
-				return PanelContainerSide.RIGHT;
-			case spr_centerShape:
-			default:
-				return PanelContainerSide.FILL;
+			targets.forEach(function hideAllTargets(item:DisplayObject, index:int, array:Vector.<DisplayObject>):void {
+				item.alpha = 0.0;
+			});
+		}
+		else {
+			spr_centerShape.alpha = spr_leftShape.alpha = spr_rightShape.alpha = spr_bottomShape.alpha = spr_topShape.alpha = 0
 		}
 	}
 	
-	public function hideAll():void {
-		spr_centerShape.alpha = spr_leftShape.alpha = spr_rightShape.alpha = spr_bottomShape.alpha = spr_topShape.alpha = 0
+	/**
+	 * @inheritDoc
+	 */
+	public function show(targets:Vector.<DisplayObject> = null):void
+	{
+		if (targets)
+		{
+			targets.forEach(function showAllTargets(item:DisplayObject, index:int, array:Vector.<DisplayObject>):void {
+				item.alpha = 1.0;
+			});
+		}
+		else {
+			spr_centerShape.alpha = spr_leftShape.alpha = spr_rightShape.alpha = spr_bottomShape.alpha = spr_topShape.alpha = 1
+		}
 	}
 	
-	public function showAll():void {
-		spr_centerShape.alpha = spr_leftShape.alpha = spr_rightShape.alpha = spr_bottomShape.alpha = spr_topShape.alpha = 1
-	}
-	
+	/**
+	 * @inheritDoc
+	 */
 	public function draw(width:Number, height:Number):void
 	{
 		var currGraphics:Graphics;
-		var squareSize:Number = width / 3
+		var squareSize:Number = (width + height) / 6
 		currGraphics = spr_centerShape.graphics
 		currGraphics.clear()
-		currGraphics.beginFill(0xFF0000, 1)
+		currGraphics.beginFill(0xFFFFFF, 1)
 		currGraphics.drawRect(squareSize, squareSize, squareSize, squareSize)
 		currGraphics.endFill()
 		
@@ -211,11 +238,24 @@ internal class GreenDockHelper extends Sprite implements IDockHelper
 		currGraphics.endFill()
 	}
 	
+	/**
+	 * @inheritDoc
+	 */
 	public function getDefaultWidth():Number {
 		return 64.0
 	}
 	
+	/**
+	 * @inheritDoc
+	 */
 	public function getDefaultHeight():Number {
 		return 64.0
+	}
+	
+	/**
+	 * @inheritDoc
+	 */
+	public function setDockFormat(panelFormat:String, containerFormat:String):void {
+		cl_helperDelegate.setDockFormat(panelFormat, containerFormat)
 	}
 }
