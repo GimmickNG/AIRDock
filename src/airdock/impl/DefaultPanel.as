@@ -48,7 +48,10 @@ package airdock.impl
 			super();
 			cl_panelDelegate = new PanelDelegate(this)
 		}
-		
+		CONFIG::debug override public function toString():String 
+		{
+			return panelName;
+		}
 		public function draw(color:uint, width:int, height:int):void
 		{
 			var prevWidth:Number = this.width
