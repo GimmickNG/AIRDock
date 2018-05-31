@@ -591,20 +591,19 @@ package airdock
 			if (panels.length < currentPanels.length) {
 				return;
 			}
-			
 			hasChildren = currentPanels.length && currentPanels.some(function getDisjointPanels(item:IPanel, index:int, array:Vector.<IPanel>):Boolean {
 				return item && panels.indexOf(item) == -1;
 			});
  			if (hasChildren) {
 				return;	//has children, do not remove - either more than the panel being removed, or a different panel from that which is being removed
 			}
+			
 			var rootContainer:IContainer = treeResolver.findRootContainer(container)
 			var parkedWindow:NativeWindow = getContainerWindow(rootContainer)
-			rootContainer.removeContainer(container);
-			if (parkedWindow) {
+			if (parkedWindow && rootContainer == container) {
 				parkedWindow.visible = false;	//do not dispose of container; since it is a parked container, just hide it
 			}
-			else {
+			else if(rootContainer.removeContainer(container)) {
 				dispatchEvent(new PanelContainerEvent(PanelContainerEvent.CONTAINER_REMOVED, panels, container, false, false))	//not a parked container; can remove
 			}
 		}
@@ -962,7 +961,7 @@ package airdock
 			
 			var window:NativeWindow = new NativeWindow(options)
 			var stage:Stage = window.stage
-			addWindowListeners(window)
+			setupWindow(window)
 			dct_windows[panel] = window
 			window.title = panel.panelName
 			stage.stageWidth = panel.width
@@ -1053,17 +1052,15 @@ package airdock
 			}
 			var panelPairs:Vector.<PanelSideSequence> = extractOrderedPanelSideCodes(dockablePanels, parentContainer);
 			var firstContainer:IContainer = getPanelContainer(panelPairs[0].key as IPanel);	//first panel's parked container will have all the other panels moved into it
-			
 			var preExistingPanels:Vector.<IPanel> = firstContainer.getPanels(true).filter(function getPanelsDifference(item:IPanel, index:int, array:Vector.<IPanel>):Boolean {
 				return item && dockablePanels.indexOf(item) == -1;	//exclude panels which are going to be moved to this container
 			});
-			dockPanels(preExistingPanels, firstContainer)	//recursively empty the first panel's parked container by calling dockPanels() on it
-			
 			if (parentContainer != firstContainer)
 			{
 				shadowContainer(parentContainer, firstContainer)
 				movePanelsIntoContainer(panelPairs, firstContainer)
 			}
+			dockPanels(preExistingPanels, firstContainer)	//recursively empty the first panel's parked container by calling dockPanels() on it
 			return firstContainer;
 		}
 		
