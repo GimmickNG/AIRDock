@@ -36,9 +36,11 @@ package airdock.impl
 		public function createPanel(options:PanelConfig):IPanel 
 		{
 			var defaultPanel:DefaultPanel = new DefaultPanel()
-			defaultPanel.draw(options.color, options.width, options.height)
+			defaultPanel.backgroundColor = options.color;
 			defaultPanel.resizable = options.resizable;
 			defaultPanel.dockable = options.dockable;
+			defaultPanel.height = options.height;
+			defaultPanel.width = options.width;
 			return defaultPanel
 		}
 		

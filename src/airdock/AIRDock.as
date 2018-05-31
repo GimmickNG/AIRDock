@@ -1057,8 +1057,8 @@ package airdock
 			});
 			if (parentContainer != firstContainer)
 			{
-				shadowContainer(parentContainer, firstContainer)
 				movePanelsIntoContainer(panelPairs, firstContainer)
+				shadowContainer(parentContainer, firstContainer)
 			}
 			dockPanels(preExistingPanels, firstContainer)	//recursively empty the first panel's parked container by calling dockPanels() on it
 			return firstContainer;
@@ -1111,7 +1111,7 @@ package airdock
 			else if (!container || getAuthoritativeContainerState(container) == PanelContainerState.DOCKED)
 			{
 				if (!container) {
-					dockPanels(panels, null);
+					container = dockPanels(panels, null);
 				}
 				/* Panels are part of a parked container now
 				 * Show the window and the panel along with it */
@@ -1134,10 +1134,9 @@ package airdock
 			if (changeOccurred) {
 				dispatchEvent(new PanelContainerStateEvent(PanelContainerStateEvent.VISIBILITY_TOGGLED, panels, newParent, PanelContainerState.INVISIBLE, PanelContainerState.VISIBLE, false, false));
 			}
-			var success:Boolean = !!newParent && panels.every(function showAllPanels(item:IPanel, index:int, array:Vector.<IPanel>):Boolean {
+			return !!newParent && panels.every(function showAllPanels(item:IPanel, index:int, array:Vector.<IPanel>):Boolean {
 				return newParent.showPanel(item);
 			});
-			return success;
 		}
 		
 		/**
@@ -1172,10 +1171,10 @@ package airdock
 			var parentContainer:IContainer = treeResolver.findParentContainer(panel as DisplayObject);
 			var rootContainer:IContainer = treeResolver.findRootContainer(parentContainer);
 			if (!rootContainer || isForeignContainer(rootContainer)) {
-				return false;
+				return false;	//will also return false if panel is null
 			}
 			var window:NativeWindow = getContainerWindow(rootContainer);
-			return (window && window.visible) && rootContainer.isPanelVisible(panel);
+			return (!window && panel.stage) || window.visible
 		}
 		
 		/**

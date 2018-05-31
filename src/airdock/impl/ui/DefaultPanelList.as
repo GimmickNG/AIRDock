@@ -388,11 +388,15 @@ package airdock.impl.ui
 		 */
 		public function set maxHeight(value:Number):void 
 		{
+			var barHeight:Number = 24
+			if(value < 24) {
+				barHeight = value * 0.1
+			}
 			num_maxHeight = value;
 			redraw(width, value)
-			rect_visibleRegion.y = 16
 			pt_preferredLocation.y = 0
-			rect_visibleRegion.height = value - 40
+			rect_visibleRegion.y = barHeight
+			rect_visibleRegion.height = value - (barHeight * 2)
 		}
 		
 		/**

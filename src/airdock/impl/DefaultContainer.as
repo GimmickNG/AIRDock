@@ -51,12 +51,6 @@ package airdock.impl
 	[Event(name="pcContainerCreated", type="airdock.events.PanelContainerEvent")]
 	
 	/**
-	 * Dispatched whenever a container has had its size (width, height, or both) changed.
-	 * @eventType	airdock.events.PanelContainerEvent.RESIZED
-	 */
-	[Event(name="pcContainerResized", type="airdock.events.PanelContainerEvent")]
-	
-	/**
 	 * Dispatched when a panel is added directly to this container.
 	 * @eventType	airdock.events.PanelContainerEvent.PANEL_ADDED
 	 */
@@ -117,6 +111,9 @@ package airdock.impl
 				{
 					case "sideSize":
 						render();
+					case "width":
+					case "height":
+						cl_containerDelegate.applyFilters(displayFilters)
 						break;
 					case "maxSideSize":
 						if(value < sideSize) {
@@ -991,7 +988,6 @@ package airdock.impl
 					dispPanelList.y = preferredLocation.y
 					addChild(dispPanelList)
 				}
-				cl_containerDelegate.applyFilters(displayFilters)
 			}
 			
 			if (hasSides) {
@@ -1017,9 +1013,6 @@ package airdock.impl
 					currPanel.x = effX;
 					currPanel.y = effY;
 				}
-			}
-			if(valueChange) {
-				dispatchEvent(new PanelContainerEvent(PanelContainerEvent.RESIZED, null, this, true, false))
 			}
 		}
 	}

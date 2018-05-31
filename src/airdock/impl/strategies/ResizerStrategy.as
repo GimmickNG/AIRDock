@@ -318,7 +318,7 @@ package airdock.impl.strategies
 		private function removeResizerListeners(resizer:IResizer):void
 		{
 			if (resizer) {
-				resizer.removeEventListener(PanelContainerEvent.RESIZING, resizeNestedContainerOnEvent)
+				resizer.removeEventListener(ResizerEvent.RESIZING, resizeNestedContainerOnEvent)
 			}
 		}
 		

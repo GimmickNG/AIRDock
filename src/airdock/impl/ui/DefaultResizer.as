@@ -3,6 +3,7 @@ package airdock.impl.ui
 	import airdock.delegates.ResizerDelegate;
 	import airdock.enums.PanelContainerSide;
 	import airdock.events.PanelContainerEvent;
+	import airdock.events.ResizerEvent;
 	import airdock.interfaces.docking.IContainer;
 	import airdock.interfaces.ui.IResizer;
 	import flash.display.Sprite;
@@ -20,10 +21,10 @@ package airdock.impl.ui
 	[Event(name="complete", type="flash.events.Event")]
 	
 	/**
-	 * Dispatched whenever a resize operation has been applied, i.e. the corresponding container has been resized.
-	 * @eventType	airdock.events.PanelContainerEvent.RESIZED
+	 * Dispatched whenever a resize operation is about to be applied, that is, when a container is about to be resized.
+	 * @eventType	airdock.events.ResizerEvent.RESIZING
 	 */
-	[Event(name="pcContainerResized", type="airdock.events.PanelContainerEvent")]
+	[Event(name="reResizing", type="airdock.events.ResizerEvent")]
 	
 	/**
 	 * Default IResizer implementation.
