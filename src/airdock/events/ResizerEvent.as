@@ -1,6 +1,6 @@
 package airdock.events 
 {
-	import airdock.enums.PanelContainerSide;
+	import airdock.enums.ContainerSide;
 	import airdock.interfaces.docking.IContainer;
 	import flash.events.Event;
 	
@@ -13,15 +13,15 @@ package airdock.events
 		public static const RESIZING:String = "reResizing";
 		public static const RESIZED:String = "reResized";
 		
-		private var i_sideCode:int;
+		private var str_sideCode:String;
 		private var num_position:Number;
 		private var plc_container:IContainer;
-		public function ResizerEvent(type:String, container:IContainer = null, position:Number = NaN, sideCode:int = PanelContainerSide.FILL, bubbles:Boolean = false, cancelable:Boolean = false)
+		public function ResizerEvent(type:String, container:IContainer = null, position:Number = NaN, sideCode:String = ContainerSide.FILL, bubbles:Boolean = false, cancelable:Boolean = false)
 		{ 
 			super(type, bubbles, cancelable);
 			plc_container = container
 			num_position = position;
-			i_sideCode = sideCode
+			str_sideCode = sideCode
 		}
 		
 		public override function clone():Event { 
@@ -32,8 +32,8 @@ package airdock.events
 			return formatToString("ResizerEvent", "container", "position", "side", "type", "bubbles", "cancelable", "eventPhase"); 
 		}
 		
-		public function get sideCode():int {
-			return i_sideCode;
+		public function get sideCode():String {
+			return str_sideCode;
 		}
 		
 		public function get position():Number {

@@ -1,6 +1,5 @@
 package airdock.interfaces.docking 
 {
-	import airdock.interfaces.display.IDisplayFilter;
 	import airdock.interfaces.display.IDisplayObjectContainer;
 	import airdock.interfaces.display.IFilterable;
 	import airdock.interfaces.ui.IPanelList;
@@ -19,7 +18,7 @@ package airdock.interfaces.docking
 		 * @return	The container for the given side. May be null if the side does not exist for the container.
 		 * @see	#fetchSide()
 		 */
-		function getSide(side:int):IContainer
+		function getSide(side:String):IContainer
 		
 		/**
 		 * Adds a container to the side specified. The container may automatically create the complementary side, depending on the implementation.
@@ -28,7 +27,7 @@ package airdock.interfaces.docking
 		 * @return	The container supplied in the container parameter, or the container into which it is merged, if it already exists in the current container.
 		 * 			This can be used to chain operations, or to get the new container if merges are used instead of direct child additions.
 		 */
-		function addContainer(side:int, container:IContainer):IContainer
+		function addContainer(side:String, container:IContainer):IContainer
 		
 		/**
 		 * Adds the panel to the side specified. The container automatically creates the container if it does not exist.
@@ -36,7 +35,7 @@ package airdock.interfaces.docking
 		 * @param	panel	The panel to attach as a part of (i.e. in) this container, or as a side underneath, if it does not exist.
 		 * @return	The container to which the panel is attached. This may be the same container (if the side is FILL), or a container below it otherwise.
 		 */
-		function addToSide(side:int, panel:IPanel):IContainer
+		function addToSide(side:String, panel:IPanel):IContainer
 		
 		/**
 		 * Displays the supplied panel by bringing it in front of all other panels in the container.
@@ -84,7 +83,7 @@ package airdock.interfaces.docking
 		 * @param	side
 		 * @return
 		 */
-		function fetchSide(side:int):IContainer
+		function fetchSide(side:String):IContainer
 		
 		/**
 		 * Sets the containers for the current container, and sets the side code of the current container to match that of the side supplied.
@@ -93,7 +92,7 @@ package airdock.interfaces.docking
 		 * @param	currentSide	The new current side for the container.
 		 * @param	otherSide	The new (complementary) side for the container.
 		 */
-		function setContainers(sideCode:int, currentSide:IContainer, otherSide:IContainer):void;
+		function setContainers(sideCode:String, currentSide:IContainer, otherSide:IContainer):void;
 		
 		/**
 		 * Merges the contents of the current container into the destination container, and empties the current container in the process.
@@ -147,11 +146,11 @@ package airdock.interfaces.docking
 		
 		/**
 		 * The current side for this container. Read-only.
-		 * A container can have any of the sides mentioned in the PanelContainerSide enumeration class.
+		 * A container can have any of the sides mentioned in the ContainerSide enumeration class.
 		 * Some implementations also have a complementary container created as well, which is complementary to the current side code.
-		 * @see	airdock.enums.PanelContainerSide
+		 * @see	airdock.enums.ContainerSide
 		 */
-		function get sideCode():int
+		function get sideCode():String
 		
 		/**
 		 * An IPanelList instance created by the Docker's IPanelListFactory for this container.
@@ -165,7 +164,7 @@ package airdock.interfaces.docking
 		 * The size of the current side, if it has sides, or the size that the container corresponding to the current side will take, if it is created at any point in the future.
 		 * This can be either width or height based, depending on whether the side is LEFT or RIGHT, or TOP or BOTTOM respectively.
 		 * Values less than 1 are taken as a percentage of the total side width or height.
-		 * @see	airdock.enums.PanelContainerSide
+		 * @see	airdock.enums.ContainerSide
 		 */
 		function get sideSize():Number
 		function set sideSize(size:Number):void
@@ -176,7 +175,7 @@ package airdock.interfaces.docking
 		 * Values less than 1 are taken as a percentage of the total side width or height.
 		 * 
 		 * If the maximum is greater than the size of the container, then it is ignored in favor of the size of the container.
-		 * @see	airdock.enums.PanelContainerSide
+		 * @see	airdock.enums.ContainerSide
 		 */
 		function get maxSideSize():Number;
 		function set maxSideSize(value:Number):void;
@@ -187,13 +186,13 @@ package airdock.interfaces.docking
 		 * Values less than 1 are taken as a percentage of the total side width or height.
 		 * 
 		 * Values lesser than 0 are interpreted as 0.
-		 * @see	airdock.enums.PanelContainerSide
+		 * @see	airdock.enums.ContainerSide
 		 */
 		function get minSideSize():Number;
 		function set minSideSize(value:Number):void;
 		
 		/**
-		 * The state of the container, as defined in the PanelContainerState enumeration class.
+		 * The state of the container, as defined in the ContainerState enumeration class.
 		 * Automatically generated parked containers are always set as DOCKED; containers which are created by the user, or by the createContainer() method are always set as INTEGRATED.
 		 * Containers which are part of a parked container may not always have the correct state value, as they are independent of their parent containers
 		 * That is, they may not have any knowledge of their parent containers, depending on the implementation.

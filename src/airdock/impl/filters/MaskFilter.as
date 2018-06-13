@@ -1,9 +1,9 @@
 package airdock.impl.filters 
 {
+	import airdock.interfaces.display.IDisplayFilter;
+	import airdock.interfaces.display.IFilterable;
 	import flash.display.Sprite;
 	import flash.utils.Dictionary;
-	import airdock.interfaces.display.IFilterable;
-	import airdock.interfaces.display.IDisplayFilter;
 	
 	/**
 	 * Mask filter which masks the content of the filterable within its bounds.

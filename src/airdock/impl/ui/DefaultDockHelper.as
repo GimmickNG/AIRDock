@@ -1,14 +1,11 @@
 package airdock.impl.ui 
 {
 	import airdock.delegates.DockHelperDelegate;
-	import airdock.enums.PanelContainerSide;
-	import airdock.interfaces.ui.IDockTarget;
+	import airdock.enums.ContainerSide;
 	import airdock.interfaces.ui.IDockHelper;
-	import flash.desktop.NativeDragManager;
 	import flash.display.DisplayObject;
 	import flash.display.Graphics;
 	import flash.display.Sprite;
-	import flash.events.NativeDragEvent;
 
 	/**
 	 * Default IDockHelper implementation. 
@@ -42,7 +39,7 @@ package airdock.impl.ui
 			
 			cl_helperDelegate = new DockHelperDelegate(this);
 			var targets:Vector.<DisplayObject> = new <DisplayObject>[spr_topShape, spr_leftShape, spr_rightShape, spr_bottomShape, spr_centerShape];
-			var sides:Vector.<String> = new <String>[PanelContainerSide.STRING_TOP, PanelContainerSide.STRING_LEFT, PanelContainerSide.STRING_RIGHT, PanelContainerSide.STRING_BOTTOM, PanelContainerSide.STRING_FILL];
+			var sides:Vector.<String> = new <String>[ContainerSide.TOP, ContainerSide.LEFT, ContainerSide.RIGHT, ContainerSide.BOTTOM, ContainerSide.FILL];
 			targets.forEach(function addTargetsToDelegate(target:DisplayObject, index:int, array:Vector.<DisplayObject>):void {
 				cl_helperDelegate.addTarget(target, sides[index]);
 			});

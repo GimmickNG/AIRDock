@@ -1,18 +1,10 @@
 package airdock.impl 
 {
 	import airdock.delegates.PanelDelegate;
-	import airdock.enums.PanelContainerState;
 	import airdock.events.PropertyChangeEvent;
 	import airdock.interfaces.display.IDisplayFilter;
 	import airdock.interfaces.docking.IPanel;
-	import flash.display.DisplayObject;
-	import flash.display.DisplayObjectContainer;
-	import flash.display.InteractiveObject;
 	import flash.display.Sprite;
-	import flash.events.Event;
-	import flash.events.EventPhase;
-	import flash.events.MouseEvent;
-	import flash.geom.Point;
 	
 	/**
 	 * Dispatched after a PROPERTY_CHANGING event has been dispatched, and if it has not been prevented, causing the related property to change.
@@ -49,6 +41,11 @@ package airdock.impl
 			cl_panelDelegate = new PanelDelegate(this)
 			addEventListener(PropertyChangeEvent.PROPERTY_CHANGING, updateSizeOnRedraw, false, 0, true)
 			addEventListener(PropertyChangeEvent.PROPERTY_CHANGED, applyFiltersOnUpdate, false, 0, true)
+		}
+		
+		override public function toString():String 
+		{
+			return panelName
 		}
 		
 		private function applyFiltersOnUpdate(evt:PropertyChangeEvent):void 
@@ -185,8 +182,7 @@ package airdock.impl
 		/**
 		 * @inheritDoc
 		 */
-		override public function set height(value:Number):void 
-		{
+		override public function set height(value:Number):void {
 			cl_panelDelegate.height = value
 		}
 	}

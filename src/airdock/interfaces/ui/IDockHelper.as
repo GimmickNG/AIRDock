@@ -3,7 +3,6 @@ package airdock.interfaces.ui
 	import airdock.interfaces.display.IDisplayObject;
 	import airdock.interfaces.ui.IDockTarget;
 	import flash.display.DisplayObject;
-	import flash.events.IEventDispatcher;
 	
 	/**
 	 * An interface defining the methods that a display object must implement in order to participate in the drag-docking mechanism of the Docker.

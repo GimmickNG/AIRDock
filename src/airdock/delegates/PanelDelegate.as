@@ -4,7 +4,6 @@ package airdock.delegates
 	import airdock.interfaces.display.IDisplayFilter;
 	import airdock.interfaces.docking.IPanel;
 	import airdock.util.PropertyChangeProxy;
-	import flash.display.DisplayObject;
 	import flash.events.Event;
 	import flash.events.IEventDispatcher;
 	
@@ -16,12 +15,12 @@ package airdock.delegates
 	{
 		private var cl_basePanel:IPanel;
 		protected var cl_changeProxy:PropertyChangeProxy;
-		protected var cl_displayFilterDelegate:DisplayFilterDelegate;
+		protected var cl_displayFilterDelegate:FilterDelegate;
 		public function PanelDelegate(panel:IPanel)
 		{
 			cl_basePanel = panel;
 			cl_changeProxy = new PropertyChangeProxy(panel)
-			cl_displayFilterDelegate = new DisplayFilterDelegate(panel)
+			cl_displayFilterDelegate = new FilterDelegate(panel)
 		}
 		
 		public function dispatchChanging(property:String, oldValue:Object, newValue:Object):Boolean {

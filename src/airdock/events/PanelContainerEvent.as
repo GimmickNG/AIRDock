@@ -56,6 +56,11 @@ package airdock.events
 		public static const PANEL_ADDED:String = "pcPanelAdded";
 		
 		/**
+		 * The constant used to define a panelRemoved event. Is dispatched by a container whenever a panel is removed from a container.
+		 */
+		public static const PANEL_REMOVED:String = "pcPanelRemoved";
+		
+		/**
 		 * The constant used to define a dragRequested event. 
 		 * Is dispatched whenever a container's panelList has requested that a drag-dock sequence be initiated for a panel or the container it is a part of, usually as a result of user action.
 		 * Since this is a request, it can be canceled to prevent default action.

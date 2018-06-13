@@ -15,21 +15,13 @@ package airdock.interfaces.docking
 	public interface IBasicDocker extends IEventDispatcher
 	{
 		/**
-		 * Integrates a panel into the given side sequence for a container.
-		 * Replaced the movePanelToContainer() method since v0.3.
-		 * 
-		 * @param	panel		The panel to move into a container.
-		 * @param	container	The container to move the panel into.
-		 * 						If the side is FILL, this must not have any containers below it, or else it may cease to function correctly.
-		 * @param	sideCode	The side sequence to which the panel must be attached to.
-		 * 						Any containers which do not exist are automatically created.
-		 * 						This is similar to the side sequence returned by the Docker's treeResolver's serializeCode() method.
-		 * @return	The container into which it has been integrated into.
-		 */
-		function addPanelToSideSequence(panel:IPanel, container:IContainer, sideCode:String):IContainer;
-		
-		/**
 		 * Docks the panels supplied into the first panel's parked container.
+		 * 
+		 * Docking a panel is defined as moving a panel to a parked (rooted) container.
+		 * Such containers are usually those which have been created automatically by the Docker.
+		 * These containers are confined to their panel's NativeWindow, by default.
+		 * 
+		 * Note: This is a group operator.
 		 * 
 		 * @param	panels		The list of panels which are to be docked (by moving into the first panel's parked container.)
 		 * @param	container	The parent container of all the panels.
@@ -47,6 +39,8 @@ package airdock.interfaces.docking
 		 * As a result, it is possible a panel may have never been integrated into such a container.
 		 * For example, if no containers were created manually, or if no panels were ever attached to such a container.
 		 * 
+		 * Note: This is a group operator.
+		 * 
 		 * @param	panels		The list of panels which are to be integrated.
 		 * @param	container	The	(current) parent container of any of the panels, or all the panels (if they belong to the same container)
 		 * 						Can be null, if all the panels are to be added to the same level.
@@ -54,6 +48,49 @@ package airdock.interfaces.docking
 		 * 			It is possible that this may be null, if it were never added to a non-parked root container.
 		 */
 		function integratePanels(panels:Vector.<IPanel>, container:IContainer):IContainer;
+		
+		/**
+		 * Hides a set of panels, and returns the list of panels which were successfully hidden.
+		 * 
+		 * Note: This is a group operator.
+		 * 
+		 * @param	panels	The list of panels to hide/remove from their container.
+		 * @return	A Vector of IPanel instances corresponding to those panels which were successfully hidden.
+		 */
+		function hidePanels(panels:Vector.<IPanel>):Vector.<IPanel>
+		
+		/**
+		 * Makes a group of panels visible.
+		 * This is done by:
+			* Docking the panels to the parked container of the first panel in the group, (or)
+			* Integrating the panels to the previous non-parked root container of the first panel in the group.
+		 * In the first case, the window is activated; this is done if there is no parent container of the panels in the beginning.
+		 * Panels shown via this method are always brought in front of other panels (so as to not be obscured.)
+		 * (Usually) dispatches a PanelContainerStateEvent if the panel was previously not part of any visible container.
+			* This depends on the implementation used.
+		 * 
+		 * Note: This is a group operator.
+		 * 
+		 * @param	panels	The list of panels to show, as a group.
+		 * 					Panels in a group are added to the same container.
+		 * 					This is regardless of whether they occupy different containers prior to calling this method or not.
+		 * @return	A Vector of IPanel instances corresponding with those panels which have been shown successfully.
+		 */
+		function showPanels(panels:Vector.<IPanel>):Vector.<IPanel>
+		
+		/**
+		 * Integrates a panel into the given side sequence for a container.
+		 * Replaced the movePanelToContainer() method since v0.3.
+		 * 
+		 * @param	panel		The panel to move into a container.
+		 * @param	container	The container to move the panel into.
+		 * 						If the side is FILL, this must not have any containers below it, or else it may cease to function correctly.
+		 * @param	sideCode	The side sequence to which the panel must be attached to.
+		 * 						Any containers which do not exist are automatically created.
+		 * 						This is similar to the side sequence returned by the Docker's treeResolver's serializeCode() method.
+		 * @return	The container into which it has been integrated into.
+		 */
+		function addPanelToSideSequence(panel:IPanel, container:IContainer, sideCode:String):IContainer;
 		
 		/**
 		 * Sets up the panel (by adding listeners and creating a window for it.)
@@ -82,40 +119,6 @@ package airdock.interfaces.docking
 		 * @param	window	The window whose listeners, previously added by this Docker instance, are to be removed from it.
 		 */
 		function unhookWindow(window:NativeWindow):void
-		
-		/**
-		 * Removes a panel from its parent container, effectively hiding it.
-		 * 
-		 * Returns a Boolean indicating whether the panel was hidden successfully or not.
-		 * The return value does not have the same meaning as the event dispatched; the event is dispatched if and only if there is a change in the visibility status of the panel.
-		 * The return value is more in line with that of the IContainer interface's removePanel() method.
-		 
-		 * @param	panel	The panel to hide/remove from its container.
-		 * @return	A Boolean indicating whether the panel was hidden successfully or not.
-		 * 			If a panel is foreign to the Docker, or a null panel is supplied, then false is returned.
-		 */
-		function hidePanel(panel:IPanel):Boolean;
-		
-		/**
-		 * Makes a group of panels visible.
-		 * This is done by:
-			* Docking the panels to the parked container of the first panel in the group, (or)
-			* Integrating the panels to the previous non-parked root container of the first panel in the group.
-		 * In the first case, the window is activated; this is done if there is no parent container of the panels in the beginning.
-		 * Panels shown via this method are always brought in front of other panels (so as to not be obscured.)
-		 * (Usually) dispatches a PanelContainerStateEvent if the panel was previously not part of any visible container.
-			* This depends on the implementation used.
-		 * 
-		 * Returns a Boolean indicating whether the panel was shown successfully or not.
-		 * The return value does not have the same meaning as the event dispatched; the event is dispatched if and only if there is a change in the visibility status of the panels.
-		 * The return value is more in line with that of the IContainer interface's showPanel() method.
-		 * 
-		 * @param	panels	The list of panels to show, as a group.
-		 * 					Panels in a group are added to the same container.
-		 * 					This is regardless of whether they occupy different containers prior to calling this method or not.
-		 * @return	A Boolean indicating whether the panels were shown successfully or not.
-		 */
-		function showPanels(panels:Vector.<IPanel>):Boolean;
 		
 		/**
 		 * Returns the parked container for the given panel.
@@ -155,8 +158,8 @@ package airdock.interfaces.docking
 		/**
 		 * Checks whether a panel is visible or not. A panel is visible if it is currently on any Stage instance.
 		 * @param	panel	The panel to check whether it is visible or not.
-		 * @return	A Boolean indicating whether the panel is visible or not. Values are also enumerated in the PanelContainerState enumeration class.
-		 * @see	airdock.enums.PanelContainerState
+		 * @return	A Boolean indicating whether the panel is visible or not. Values are also enumerated in the ContainerState enumeration class.
+		 * @see	airdock.enums.ContainerState
 		 */
 		function isPanelVisible(panel:IPanel):Boolean;
 		

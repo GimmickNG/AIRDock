@@ -21,6 +21,7 @@ package airdock.impl.strategies
 	import flash.events.Event;
 	import flash.events.IEventDispatcher;
 	import flash.events.NativeDragEvent;
+	import flash.events.NativeWindowBoundsEvent;
 	import flash.geom.Point;
 	import flash.utils.Dictionary;
 	
@@ -71,6 +72,7 @@ package airdock.impl.strategies
 			if(mainContainer && mainContainer.stage) {
 				lightWeightOptions.owner = mainContainer.stage.nativeWindow
 			}
+			
 			nwnd_dockerWindow = new NativeWindow(lightWeightOptions)
 			nwnd_dockerWindow.stage.addEventListener(NativeDragEvent.NATIVE_DRAG_ENTER, changeDockHelperState, false, 0, true)
 		}
@@ -100,7 +102,7 @@ package airdock.impl.strategies
 				var prevContainer:DisplayObject = evt.oldValue as DisplayObject
 				var newContainer:DisplayObject = evt.newValue as DisplayObject
 				if (newContainer) {
-					newContainer.addEventListener(NativeDragEvent.NATIVE_DRAG_COMPLETE, changeDockHelperState)
+					newContainer.addEventListener(NativeDragEvent.NATIVE_DRAG_COMPLETE, changeDockHelperState, false, 0, true)
 				}
 				if (prevContainer) {
 					prevContainer.removeEventListener(NativeDragEvent.NATIVE_DRAG_COMPLETE, changeDockHelperState)
@@ -198,11 +200,18 @@ package airdock.impl.strategies
 					var targetWindow:NativeWindow = targetContainer.stage.nativeWindow
 					var centerPoint:Point = new Point(0.5 * (targetContainer.width - dockHelper.width), 0.5 * (targetContainer.height - dockHelper.height))
 					var stageCoordinates:Point = targetWindow.globalToScreen(targetContainer.localToGlobal(centerPoint))
-					
+					if (!nwnd_dockerWindow.hasEventListener(NativeWindowBoundsEvent.MOVE))
+					{
+						function showDockHelperOnMove(evt:Event):void
+						{
+							nwnd_dockerWindow.visible = true;
+							nwnd_dockerWindow.removeEventListener(NativeWindowBoundsEvent.MOVE, showDockHelperOnMove)
+						}
+						nwnd_dockerWindow.addEventListener(NativeWindowBoundsEvent.MOVE, showDockHelperOnMove, false, 0, true);
+					}
+					dockHelper.show()
 					nwnd_dockerWindow.x = stageCoordinates.x
 					nwnd_dockerWindow.y = stageCoordinates.y
-					dockHelper.show()
-					nwnd_dockerWindow.visible = true;
 					nwnd_dockerWindow.orderInFrontOf(targetWindow)
 					dropContainerInfo.destinationContainer = targetContainer
 				}

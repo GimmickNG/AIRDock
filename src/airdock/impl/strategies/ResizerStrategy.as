@@ -1,16 +1,16 @@
 package airdock.impl.strategies 
 {
-	import airdock.enums.PanelContainerSide;
+	import airdock.enums.ContainerSide;
 	import airdock.events.PanelContainerEvent;
 	import airdock.events.PropertyChangeEvent;
 	import airdock.events.ResizerEvent;
-	import airdock.util.IDisposable;
-	import airdock.interfaces.strategies.IDockerStrategy;
 	import airdock.interfaces.docking.IBasicDocker;
 	import airdock.interfaces.docking.IContainer;
 	import airdock.interfaces.docking.ICustomizableDocker;
 	import airdock.interfaces.docking.ITreeResolver;
+	import airdock.interfaces.strategies.IDockerStrategy;
 	import airdock.interfaces.ui.IResizer;
+	import airdock.util.IDisposable;
 	import flash.display.DisplayObject;
 	import flash.display.DisplayObjectContainer;
 	import flash.events.Event;
@@ -133,7 +133,7 @@ package airdock.impl.strategies
 			}
 			
 			var size:Number = evt.position;
-			var orientation:int = evt.sideCode;
+			var orientation:String = evt.sideCode;
 			var currContainer:IContainer = evt.container;
 			if(size < 0.0) {
 				size = 0.0;
@@ -141,10 +141,10 @@ package airdock.impl.strategies
 			else if (size > 1.0)
 			{
 				var maxSize:Number;	//get maximum allowed size (width or height, based on side) since absolute size
-				if (PanelContainerSide.isComplementary(orientation, PanelContainerSide.LEFT)) {
+				if (ContainerSide.isComplementary(orientation, ContainerSide.LEFT)) {
 					maxSize = currContainer.width;
 				}
-				else if (PanelContainerSide.isComplementary(orientation, PanelContainerSide.TOP)) {
+				else if (ContainerSide.isComplementary(orientation, ContainerSide.TOP)) {
 					maxSize = currContainer.height;
 				}
 				
@@ -177,23 +177,23 @@ package airdock.impl.strategies
 			var container:IContainer = treeResolver.findParentContainer(targetContainer as DisplayObject)
 			if (container)
 			{
-				var side:int;
+				var side:String;
 				var point:Point;
 				var tolerance:Number = resizer.tolerance
 				var localXPercent:Number = targetContainer.mouseX / targetContainer.width
 				var localYPercent:Number = targetContainer.mouseY / targetContainer.height
 				
 				if (localXPercent <= tolerance) {
-					side = PanelContainerSide.LEFT;		//left edge
+					side = ContainerSide.LEFT;		//left edge
 				}
 				else if(localXPercent >= (1 - tolerance)) {
-					side = PanelContainerSide.RIGHT;	//right edge
+					side = ContainerSide.RIGHT;		//right edge
 				}
 				else if (localYPercent <= tolerance) {
-					side = PanelContainerSide.TOP;		//top edge
+					side = ContainerSide.TOP;		//top edge
 				}
 				else if(localYPercent >= (1 - tolerance)) {
-					side = PanelContainerSide.BOTTOM;	//bottom edge
+					side = ContainerSide.BOTTOM;	//bottom edge
 				}
 				else 
 				{
@@ -260,7 +260,7 @@ package airdock.impl.strategies
 				var displayResizer:Boolean;
 				while (container)
 				{
-					if (PanelContainerSide.isComplementary(side, container.sideCode))
+					if (ContainerSide.isComplementary(side, container.sideCode))
 					{
 						var targetContainerEqual:Boolean = (container.getSide(container.sideCode) == targetContainer);
 						var sidesMatch:Boolean = (side == container.sideCode);
@@ -276,7 +276,7 @@ package airdock.impl.strategies
 				if (container && displayResizer)
 				{
 					point = new Point(targetContainer.x, targetContainer.y)
-					if (PanelContainerSide.isComplementary(side, PanelContainerSide.TOP)) {
+					if (ContainerSide.isComplementary(side, ContainerSide.TOP)) {
 						point.offset(resizer.preferredXPercentage * targetContainer.width, Math.round(localYPercent) * targetContainer.height)
 					}
 					else {

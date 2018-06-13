@@ -1,6 +1,6 @@
 package airdock.events 
 {
-	import airdock.enums.PanelContainerState;
+	import airdock.enums.ContainerState;
 	import airdock.interfaces.docking.IContainer;
 	import airdock.interfaces.docking.IPanel;
 	import flash.events.Event;
@@ -25,6 +25,11 @@ package airdock.events
 	public class PanelContainerStateEvent extends PanelContainerEvent
 	{
 		/**
+		 * The constant used to define a visibilityToggling event. Is dispatched whenever a panel's, or container's, visibility is about to change.
+		 * This event is dispatched before the visibilityToggled event; preventing this event prevents default action.
+		 */
+		public static const VISIBILITY_TOGGLING:String = "pcPanelVisibilityToggling";
+		/**
 		 * The constant used to define a visibilityToggled event. Is dispatched whenever a panel's, or container's, visibility has changed.
 		 */
 		public static const VISIBILITY_TOGGLED:String = "pcPanelVisibilityToggled";
@@ -35,7 +40,7 @@ package airdock.events
 		
 		private var b_afterState:Boolean;
 		private var b_beforeState:Boolean;
-		public function PanelContainerStateEvent(type:String, panels:Vector.<IPanel> = null, container:IContainer = null, beforeDisplayState:Boolean = PanelContainerState.INTEGRATED, afterDisplayState:Boolean = PanelContainerState.INTEGRATED, bubbles:Boolean = false, cancelable:Boolean = false) 
+		public function PanelContainerStateEvent(type:String, panels:Vector.<IPanel> = null, container:IContainer = null, beforeDisplayState:Boolean = ContainerState.INTEGRATED, afterDisplayState:Boolean = ContainerState.INTEGRATED, bubbles:Boolean = false, cancelable:Boolean = false) 
 		{ 
 			super(type, panels, container, bubbles, cancelable);
 			b_beforeState = beforeDisplayState
@@ -58,8 +63,8 @@ package airdock.events
 		
 		/**
 		 * The display state of the panel or container involved, before the event had occurred.
-		 * Valid values are enumerated in the PanelContainerState enumeration class.
-		 * @see	airdock.enums.PanelContainerState
+		 * Valid values are enumerated in the ContainerState enumeration class.
+		 * @see	airdock.enums.ContainerState
 		 */
 		public function get beforeDisplayState():Boolean {
 			return b_beforeState;
@@ -67,8 +72,8 @@ package airdock.events
 		
 		/**
 		 * The display state of the panel or container involved, after the event has occurred.
-		 * Valid values are enumerated in the PanelContainerState enumeration class.
-		 * @see	airdock.enums.PanelContainerState
+		 * Valid values are enumerated in the ContainerState enumeration class.
+		 * @see	airdock.enums.ContainerState
 		 */
 		public function get afterDisplayState():Boolean {
 			return b_afterState;

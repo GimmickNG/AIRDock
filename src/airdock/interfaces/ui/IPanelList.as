@@ -1,7 +1,7 @@
 package airdock.interfaces.ui 
 {
 	import airdock.interfaces.docking.IPanel;
-	import flash.events.IEventDispatcher;	
+	import flash.events.IEventDispatcher;
 	
 	/**
 	 * An interface which defines the methods which an object must fulfil in order to act as a container's panel list.

@@ -1,6 +1,6 @@
 package airdock.delegates 
 {
-	import airdock.enums.PanelContainerSide;
+	import airdock.enums.ContainerSide;
 	import airdock.interfaces.ui.IDockHelper;
 	import flash.desktop.NativeDragManager;
 	import flash.display.DisplayObject;
@@ -49,7 +49,7 @@ package airdock.delegates
 			if(dropTarget in dct_dockTargets) {
 				return String(dct_dockTargets[dropTarget])
 			}
-			return PanelContainerSide.STRING_FILL
+			return ContainerSide.FILL
 		}
 		
 		public function get targets():Vector.<DisplayObject>

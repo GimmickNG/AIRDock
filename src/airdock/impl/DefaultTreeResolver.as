@@ -1,8 +1,7 @@
 package airdock.impl 
 {
+	import airdock.enums.ContainerSide;
 	import airdock.interfaces.docking.IContainer;
-	import airdock.enums.PanelContainerSide;
-	import airdock.interfaces.docking.IPanel;
 	import airdock.interfaces.docking.ITreeResolver;
 	import flash.display.DisplayObject;
 	import flash.display.DisplayObjectContainer;
@@ -57,7 +56,7 @@ package airdock.impl
 		 */
 		public function serializeCode(targetContainerSpace:IContainer, displayObject:DisplayObject):String
 		{
-			const STRING_FILL:String = PanelContainerSide.STRING_FILL;
+			const STRING_FILL:String = ContainerSide.FILL;
 			if(!(targetContainerSpace && displayObject)) {
 				return null;
 			}
@@ -68,10 +67,9 @@ package airdock.impl
 			if(!child) {
 				return null;
 			}
-			const SIDE_TO_STRING:Array = PanelContainerSide.getIntegerToStringMap()
 			var resultArr:Vector.<String> = new Vector.<String>();
 			var parent:IContainer, sideObj:IContainer;
-			var currSide:int, oppSide:int;
+			var currSide:String, oppSide:String;
 			
 			for (parent = findParentContainer(displayObject); parent; parent = findParentContainer(parent as DisplayObject))
 			{
@@ -80,14 +78,14 @@ package airdock.impl
 					currSide = parent.sideCode
 					sideObj = parent.getSide(currSide)
 					if(sideObj && sideObj.contains(displayObject)) {
-						resultArr.push(SIDE_TO_STRING[currSide])
+						resultArr.push(currSide)
 					}
 					else
 					{
-						currSide = PanelContainerSide.getComplementary(currSide)
+						currSide = ContainerSide.getComplementary(currSide)
 						sideObj = parent.getSide(currSide)
 						if(sideObj && sideObj.contains(displayObject)) {
-							resultArr.push(SIDE_TO_STRING[currSide])
+							resultArr.push(currSide)
 						}
 					}
 				}

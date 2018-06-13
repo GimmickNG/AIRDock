@@ -1,11 +1,10 @@
 package airdock.impl.filters 
 {
+	import airdock.interfaces.display.IDisplayFilter;
+	import airdock.interfaces.display.IFilterable;
 	import flash.display.LineScaleMode;
 	import flash.display.Shape;
-	import flash.display.Sprite;
 	import flash.utils.Dictionary;
-	import airdock.interfaces.display.IFilterable;
-	import airdock.interfaces.display.IDisplayFilter;
 	
 	/**
 	 * Border filter which draws a border around the filterable instance.

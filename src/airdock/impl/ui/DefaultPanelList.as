@@ -1,20 +1,13 @@
 package airdock.impl.ui
 {
 	import airdock.delegates.PanelListDelegate;
-	import airdock.enums.PanelContainerSide;
-	import airdock.events.PanelContainerEvent;
-	import airdock.interfaces.ui.IDockTarget;
 	import airdock.interfaces.docking.IPanel;
 	import airdock.interfaces.ui.IDisplayablePanelList;
-	import flash.desktop.NativeDragManager;
-	import flash.display.DisplayObject;
 	import flash.display.Graphics;
-	import flash.display.InteractiveObject;
 	import flash.display.LineScaleMode;
 	import flash.display.Shape;
 	import flash.display.Sprite;
 	import flash.events.MouseEvent;
-	import flash.events.NativeDragEvent;
 	import flash.geom.Point;
 	import flash.geom.Rectangle;
 	import flash.text.TextField;

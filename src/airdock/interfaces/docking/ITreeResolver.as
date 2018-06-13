@@ -24,7 +24,7 @@ package airdock.interfaces.docking
 		function findParentContainer(displayObj:DisplayObject):IContainer
 		
 		/**
-		 * Returns a string representation of the displayObject's relation with the target IContainer instance, as a sequence of side additions as defined in the PanelContainerSide enumeration class.
+		 * Returns a string representation of the displayObject's relation with the target IContainer instance, as a sequence of side additions as defined in the ContainerSide enumeration class.
 		 * For example, suppose a panel (or any other object, such as a Sprite or another container) in the given tree (sides not important):
 		 *     A
 		 *   B   C
