@@ -58,7 +58,7 @@ package airdock.events
 		 * @inheritDoc
 		 */
 		override public function toString():String { 
-			return formatToString("PanelContainerStateEvent", "type", "relatedPanel", "relatedContainer", "beforeDisplayState", "afterDisplayState", "bubbles", "cancelable", "eventPhase"); 
+			return formatToString("PanelContainerStateEvent", "type", "relatedPanels", "relatedContainer", "beforeDisplayState", "afterDisplayState", "bubbles", "cancelable", "eventPhase"); 
 		}
 		
 		/**

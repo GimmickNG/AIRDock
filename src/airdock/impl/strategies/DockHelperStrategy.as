@@ -183,12 +183,12 @@ package airdock.impl.strategies
 		private function changeDockHelperState(evt:NativeDragEvent):void 
 		{
 			var type:String = evt.type
-			if (!(dockHelper && isCompatibleClipboard(evt.clipboard))) {
+			var clipBoard:Clipboard = evt.clipboard;
+			if (!(dockHelper && isCompatibleClipboard(clipBoard))) {
 				return;
 			}
 			else if (type == NativeDragEvent.NATIVE_DRAG_ENTER)
 			{
-				var clipBoard:Clipboard = evt.clipboard;
 				var targetContainer:IContainer = (evt.target as IContainer) || treeResolver.findParentContainer(evt.target as DisplayObject)
 				var clipboardContainer:IContainer = clipBoard.getData(dockFormat.containerFormat, ClipboardTransferMode.ORIGINAL_ONLY) as IContainer;
 				var dropContainerInfo:IDragDockFormat = clipBoard.getData(dockFormat.destinationFormat, ClipboardTransferMode.ORIGINAL_ONLY) as IDragDockFormat
@@ -200,25 +200,32 @@ package airdock.impl.strategies
 					var targetWindow:NativeWindow = targetContainer.stage.nativeWindow
 					var centerPoint:Point = new Point(0.5 * (targetContainer.width - dockHelper.width), 0.5 * (targetContainer.height - dockHelper.height))
 					var stageCoordinates:Point = targetWindow.globalToScreen(targetContainer.localToGlobal(centerPoint))
-					if (!nwnd_dockerWindow.hasEventListener(NativeWindowBoundsEvent.MOVE))
-					{
-						function showDockHelperOnMove(evt:Event):void
-						{
-							nwnd_dockerWindow.visible = true;
-							nwnd_dockerWindow.removeEventListener(NativeWindowBoundsEvent.MOVE, showDockHelperOnMove)
-						}
-						nwnd_dockerWindow.addEventListener(NativeWindowBoundsEvent.MOVE, showDockHelperOnMove, false, 0, true);
-					}
+					
 					dockHelper.show()
-					nwnd_dockerWindow.x = stageCoordinates.x
-					nwnd_dockerWindow.y = stageCoordinates.y
-					nwnd_dockerWindow.orderInFrontOf(targetWindow)
+					stageCoordinates.x = int(stageCoordinates.x)
+					stageCoordinates.y = int(stageCoordinates.y)
+					if (stageCoordinates.equals(nwnd_dockerWindow.bounds.topLeft)) {
+						showDockHelperOnMove(null)
+					}
+					else
+					{
+						nwnd_dockerWindow.addEventListener(NativeWindowBoundsEvent.MOVE, showDockHelperOnMove, false, 0, true);
+						nwnd_dockerWindow.x = stageCoordinates.x
+						nwnd_dockerWindow.y = stageCoordinates.y
+					}
 					dropContainerInfo.destinationContainer = targetContainer
 				}
 			}
 			else if(evt.type == NativeDragEvent.NATIVE_DRAG_DROP || evt.type == NativeDragEvent.NATIVE_DRAG_COMPLETE || !evt.relatedObject || nwnd_dockerWindow.stage.contains(evt.relatedObject)) {
 				nwnd_dockerWindow.visible = false;
 			}
+		}
+		
+		private function showDockHelperOnMove(evt:Event):void
+		{
+			nwnd_dockerWindow.visible = true;
+			nwnd_dockerWindow.orderToFront();
+			nwnd_dockerWindow.removeEventListener(NativeWindowBoundsEvent.MOVE, showDockHelperOnMove)
 		}
 		
 		private function get dockHelper():IDockHelper {

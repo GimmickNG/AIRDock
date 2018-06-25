@@ -126,6 +126,10 @@ package airdock.impl.ui
 			var panels:Vector.<IPanel> = new Vector.<IPanel>();
 			var dockAll:Boolean = !(evt.target is PanelTab);
 			const ACTIVATED:Boolean = PanelTab.ACTIVATED;
+			
+			if(evt.target is PanelTab) {
+				activateTab(evt.target as PanelTab, evt.ctrlKey)
+			}
 			vec_tabs.forEach(function requestDrag(item:PanelTab, index:int, array:Vector.<PanelTab>):void
 			{
 				if(dockAll || item.activeState == ACTIVATED) {
@@ -133,7 +137,6 @@ package airdock.impl.ui
 				}
 			});
 			cl_listDelegate.requestDrag(panels)
-			evt.stopImmediatePropagation()
 			stopDispatchDrag(evt)
 		}
 		
@@ -182,8 +185,8 @@ package airdock.impl.ui
 			if (index != -1)
 			{
 				var currTab:PanelTab = vec_tabs[index]
-				if(currTab.activeState == PanelTab.ACTIVATED) {
-					tf_panelName.text = panel.panelName;
+				if (currTab.activeState == PanelTab.ACTIVATED) {
+					tf_panelName.text = panel.panelName || "";
 				}
 				currTab.setTabName(panel.panelName);
 				redraw(width, height)
@@ -193,29 +196,8 @@ package airdock.impl.ui
 		private function handlePanelListClick(evt:MouseEvent):void
 		{
 			const ACTIVATED:Boolean = PanelTab.ACTIVATED;
-			if (evt.target is PanelTab)
-			{
-				var activeTabs:Vector.<PanelTab>
-				var panel:IPanel = cl_listDelegate.getPanelAt(vec_tabs.indexOf(evt.target as PanelTab));
-				if (evt.ctrlKey)
-				{
-					//holding down the Ctrl or Command key will allow the user to select multiple panels
-					//this is done by caching the active tabs before, and reactivating them after (since showPanel resets them)
-					activeTabs = vec_tabs.filter(function getActiveTabs(item:PanelTab, index:int, array:Vector.<PanelTab>):Boolean {
-						return item.activeState == ACTIVATED;
-					});
-				}
-				
-				if(cl_listDelegate.requestShow(new <IPanel>[panel])) {
-					showPanel(panel)
-				}
-				
-				if (activeTabs)
-				{
-					activeTabs.forEach(function activatePreviousTabs(item:PanelTab, index:int, array:Vector.<PanelTab>):void {
-						item.activate()
-					})
-				}
+			if (evt.target is PanelTab) {
+				activateTab(evt.target as PanelTab, evt.ctrlKey)
 			}
 			else if (evt.target == spr_removePanel)
 			{
@@ -230,6 +212,32 @@ package airdock.impl.ui
 			}
 		}
 		
+		private function activateTab(tab:PanelTab, multipleSelection:Boolean):void 
+		{
+			const ACTIVATED:Boolean = PanelTab.ACTIVATED;
+			var activeTabs:Vector.<PanelTab>
+			var panel:IPanel = cl_listDelegate.getPanelAt(vec_tabs.indexOf(tab));
+			if (multipleSelection)
+			{
+				/* holding down the Ctrl or Command key will allow the user to select multiple panels;
+				 * this is done by caching the active tabs before, and reactivating them after (since showPanel resets them) */
+				activeTabs = vec_tabs.filter(function getActiveTabs(item:PanelTab, index:int, array:Vector.<PanelTab>):Boolean {
+					return item.activeState == ACTIVATED;
+				});
+			}
+			
+			if(cl_listDelegate.requestShow(new <IPanel>[panel])) {
+				showPanel(panel)
+			}
+			
+			if (activeTabs)
+			{
+				activeTabs.forEach(function activatePreviousTabs(item:PanelTab, index:int, array:Vector.<PanelTab>):void {
+					item.activate()
+				})
+			}
+		}
+		
 		private function dispatchDock(evt:MouseEvent):void
 		{
 			var panels:Vector.<IPanel> = new Vector.<IPanel>();
@@ -241,7 +249,6 @@ package airdock.impl.ui
 					panels.push(cl_listDelegate.getPanelAt(index));
 				}
 			});
-			evt.stopImmediatePropagation()
 			cl_listDelegate.requestStateToggle(panels)
 		}
 		
@@ -457,10 +464,7 @@ internal class PanelTab extends Sprite
 	
 	public function setTabName(name:String):void
 	{
-		if(!name) {
-			name = "";
-		}
-		tf_panelName.text = name;
+		tf_panelName.text = name || "";
 		redraw(tf_panelName.width + 8, tf_panelName.height + 4)
 	}
 	

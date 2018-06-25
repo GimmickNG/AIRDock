@@ -71,11 +71,34 @@ package airdock.impl
 			minSideSize = 0.0;
 			width = height = 128;
 			sideCode = ContainerSide.FILL;
+			addEventListener(PanelContainerEvent.PANEL_REMOVE_REQUESTED, removePanelOnEvent, false, 0, true)
 			addEventListener(PropertyChangeEvent.PROPERTY_CHANGING, updateSizeOnRedraw, false, 0, true)
 			addEventListener(PropertyChangeEvent.PROPERTY_CHANGED, updateContainer, false, 0, true)
+			addEventListener(PanelContainerEvent.PANEL_ADDED, showPanelOnAdded, false, 0, true)
+			addEventListener(PanelContainerEvent.SHOW_REQUESTED, bumpPanelToTop, false, 0, true)
+			addEventListener(PanelContainerEvent.PANEL_REMOVED, showOtherPanelOnRemoved, false, 0, true)
 			otherSide = currentSide = null;
 			addChildUpdateListeners();
 			panelList = null;
+		}
+		
+		private function showPanelOnAdded(evt:PanelContainerEvent):void 
+		{
+			var panels:Vector.<IPanel> = getPanels(false);
+			evt.relatedPanels.forEach(function(item:IPanel, index:int, array:Vector.<IPanel>):void
+			{
+				if (panels.indexOf(item) != -1) {
+					showPanel(item)
+				}
+			});
+		}
+		
+		private function showOtherPanelOnRemoved(evt:PanelContainerEvent):void 
+		{
+			var relatedPanels:Vector.<IPanel> = evt.relatedPanels;
+			showPanel(getPanels(false).filter(function(item:IPanel, index:int, array:Vector.<IPanel>):Boolean {
+				return relatedPanels.indexOf(item) == -1;
+			}).pop());
 		}
 		
 		private function updateSizeOnRedraw(evt:PropertyChangeEvent):void 
@@ -98,31 +121,34 @@ package airdock.impl
 		private function updateContainer(evt:PropertyChangeEvent):void 
 		{
 			var value:Number = Number(evt.newValue)
-			if (evt.target != this)
+			if (evt.target is IPanel)
 			{
 				var currPanel:IPanel = evt.target as IPanel
 				if (panelList && currPanel && currPanel.parent == this && evt.eventPhase == EventPhase.BUBBLING_PHASE) {
 					panelList.updatePanel(currPanel)
 				}
 			}
-			else switch(evt.fieldName)
+			else if (evt.target == this)
 			{
-				case "width":
-				case "height":
-				case "sideSize":
-				case "panelList":
-					render();
-					break;
-				case "maxSideSize":
-					if(value < sideSize) {
-						sideSize = value
-					}
-					break;
-				case "minSideSize":
-					if(value > sideSize) {
-						sideSize = value;
-					}
-					break;
+				switch(evt.fieldName)
+				{
+					case "width":
+					case "height":
+					case "sideSize":
+					case "panelList":
+						render();
+						break;
+					case "maxSideSize":
+						if(value < sideSize) {
+							sideSize = value
+						}
+						break;
+					case "minSideSize":
+						if(value > sideSize) {
+							sideSize = value;
+						}
+						break;
+				}
 			}
 		}
 		
@@ -144,11 +170,7 @@ package airdock.impl
 		{
 			var target:IPanel = evt.target as IPanel;
 			var panels:Vector.<IPanel> = getPanels(true);
-			if(!target || (panels.length && panels.indexOf(target) == -1)) {
-				return;	//return if the item removed is not an IPanel or if it is not part of this container
-			}
-			dispatchEvent(new PanelContainerEvent(PanelContainerEvent.PANEL_REMOVED, new <IPanel>[target], this, true, false))
-			if (panels.length <= 1)	//found by default at position 0 due to above check
+			if (target && (panels.length <= 1 && panels.indexOf(target) != -1))
 			{
 				cl_containerDelegate.clearFilters(displayFilters)
 				dispatchEvent(new PanelContainerEvent(PanelContainerEvent.CONTAINER_REMOVE_REQUESTED, panels, this, true, true))
@@ -207,7 +229,6 @@ package airdock.impl
 		 */
 		public function set panelList(panelList:IPanelList):void
 		{
-			removePanelListListeners(this.panelList)
 			if (displayablePanelList && displayablePanelList.parent == this) {
 				removeChild(displayablePanelList)
 			}
@@ -222,7 +243,6 @@ package airdock.impl
 					displayablePanelList = DisplayObject(panelList)	//hard cast to throw error if panelList is not of type DisplayObject
 				}
 			}
-			addPanelListListeners(panelList)
 		}
 		
 		private function get displayablePanelList():DisplayObject {
@@ -238,28 +258,6 @@ package airdock.impl
 			displayableList.maxHeight = height;
 			displayableList.maxWidth = width;
 			addChild(displayable)
-		}
-		
-		private function removePanelListListeners(panelList:IPanelList):void 
-		{
-			if(!panelList) {
-				return;
-			}
-			panelList.removeEventListener(PanelContainerEvent.SHOW_REQUESTED, bumpPanelToTop)
-			panelList.removeEventListener(PanelContainerEvent.DRAG_REQUESTED, sendDockPanelRequest)
-			panelList.removeEventListener(PanelContainerEvent.PANEL_REMOVE_REQUESTED, removePanelOnEvent)
-			panelList.removeEventListener(PanelContainerEvent.STATE_TOGGLE_REQUESTED, sendDockPanelRequest)
-		}
-		
-		private function addPanelListListeners(panelList:IPanelList):void 
-		{
-			if(!panelList) {
-				return;
-			}
-			panelList.addEventListener(PanelContainerEvent.STATE_TOGGLE_REQUESTED, sendDockPanelRequest, false, 0, true)
-			panelList.addEventListener(PanelContainerEvent.PANEL_REMOVE_REQUESTED, removePanelOnEvent, false, 0, true)
-			panelList.addEventListener(PanelContainerEvent.DRAG_REQUESTED, sendDockPanelRequest, false, 0, true)
-			panelList.addEventListener(PanelContainerEvent.SHOW_REQUESTED, bumpPanelToTop, false, 0, true)
 		}
 		
 		private function removePanelOnEvent(evt:PanelContainerEvent):void
@@ -340,22 +338,6 @@ package airdock.impl
 			return false;
 		}
 		
-		private function sendDockPanelRequest(evt:PanelContainerEvent):void
-		{
-			evt.stopImmediatePropagation();
-			if(evt.isDefaultPrevented()) {
-				return;
-			}
-			var relatedPanels:Vector.<IPanel> = evt.relatedPanels
-			if (dispatchEvent(new PanelContainerEvent(evt.type, relatedPanels, this, true, true)) && relatedPanels && relatedPanels.length)
-			{
-				var panelList:Vector.<IPanel> = getPanels(false).filter(function getListDifference(item:IPanel, index:int, array:Vector.<IPanel>):Boolean {
-					return item && relatedPanels.indexOf(item) == -1;	//search and show a panel that's not any of the related panels
-				});
-				showPanel(panelList.pop())
-			}
-		}
-		
 		private function updatePanelListOnEvent(evt:Event):void 
 		{
 			var panel:IPanel = evt.target as IPanel;
@@ -363,12 +345,13 @@ package airdock.impl
 			if (!(panel && evt.eventPhase == EventPhase.BUBBLING_PHASE && panel.parent == this)) {
 				return;
 			}
-			else if (panelList)
+			
+			if (panelList)
 			{
 				if (evt.type == Event.REMOVED) {
 					panelList.removePanel(panel)
 				}
-				else
+				else if(evt.type == Event.ADDED)
 				{
 					panelList.addPanelAt(panel, getChildIndex(panel as DisplayObject))
 					if(displayablePanelList) {
@@ -385,6 +368,13 @@ package airdock.impl
 			}
 			else {
 				dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SETUP_REQUESTED, null, this, true, true));
+			}
+			
+			if (evt.type == Event.REMOVED) {
+				dispatchEvent(new PanelContainerEvent(PanelContainerEvent.PANEL_REMOVED, new <IPanel>[panel], this, true, false))
+			}
+			else if(evt.type == Event.ADDED) {
+				dispatchEvent(new PanelContainerEvent(PanelContainerEvent.PANEL_ADDED, new <IPanel>[panel], this, true, false))
 			}
 		}
 		
@@ -563,7 +553,6 @@ package airdock.impl
 				
 				for (var index:int = numChildren - 1; index >= 0 && !(getChildAt(index) is IPanel); --index) { /*gets topmost panel*/ }
 				addChildAt(displayablePanel, index + 1)	//adds panels above the previously highest panel, so as to not obscure filters, etc.
-				dispatchEvent(new PanelContainerEvent(PanelContainerEvent.PANEL_ADDED, new <IPanel>[panel], this, true, false))
 			}
 			else {
 				container.addToSide(ContainerSide.FILL, panel)

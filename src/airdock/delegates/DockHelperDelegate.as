@@ -44,18 +44,14 @@ package airdock.delegates
 			delete dct_dockTargets[target];
 		}
 		
-		public function getSideFrom(dropTarget:DisplayObject):String
-		{
-			if(dropTarget in dct_dockTargets) {
-				return String(dct_dockTargets[dropTarget])
-			}
-			return ContainerSide.FILL
+		public function getSideFrom(dropTarget:DisplayObject):String {
+			return dct_dockTargets[dropTarget] || ContainerSide.FILL
 		}
 		
 		public function get targets():Vector.<DisplayObject>
 		{
 			var targets:Vector.<DisplayObject> = new Vector.<DisplayObject>()
-			for(var obj:Object in dct_dockTargets) {
+			for (var obj:Object in dct_dockTargets) {
 				targets.push(obj)
 			}
 			return targets;

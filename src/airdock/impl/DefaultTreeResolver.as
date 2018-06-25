@@ -51,54 +51,36 @@ package airdock.impl
 			return currParent as IContainer
 		}
 		
-		/**
-		 * @inheritDoc
-		 */
 		public function serializeCode(targetContainerSpace:IContainer, displayObject:DisplayObject):String
 		{
 			const STRING_FILL:String = ContainerSide.FILL;
-			if(!(targetContainerSpace && displayObject)) {
+			if(!(targetContainerSpace && displayObject && targetContainerSpace.contains(displayObject))) {
 				return null;
 			}
-			else if(targetContainerSpace == displayObject) {
+			else if(targetContainerSpace == displayObject || findParentContainer(displayObject) == targetContainerSpace) {
 				return STRING_FILL;
 			}
-			else for (var child:DisplayObject = displayObject; child && child != targetContainerSpace; child = child.parent) { }
-			if(!child) {
-				return null;
-			}
-			var resultArr:Vector.<String> = new Vector.<String>();
-			var parent:IContainer, sideObj:IContainer;
-			var currSide:String, oppSide:String;
 			
+			var i:uint;
+			var currSide:String, oppSide:String;
+			var parent:IContainer, sideObj:IContainer;
+			var result:Vector.<String> = new <String>[]
 			for (parent = findParentContainer(displayObject); parent; parent = findParentContainer(parent as DisplayObject))
 			{
 				if (parent.hasSides)
 				{
-					currSide = parent.sideCode
-					sideObj = parent.getSide(currSide)
-					if(sideObj && sideObj.contains(displayObject)) {
-						resultArr.push(currSide)
+					for (i = 0, currSide = parent.sideCode, sideObj = parent.getSide(currSide); i < 2 && !(sideObj && sideObj.contains(displayObject)); ++i, currSide = ContainerSide.getComplementary(currSide), sideObj = parent.getSide(currSide)) {
+						// check both containers to see if they contain the displayObject 
 					}
-					else
-					{
-						currSide = ContainerSide.getComplementary(currSide)
-						sideObj = parent.getSide(currSide)
-						if(sideObj && sideObj.contains(displayObject)) {
-							resultArr.push(currSide)
-						}
-					}
+					
+					result.push(currSide)
 				}
 				else {
-					resultArr.push(STRING_FILL);
-				}
-				
-				if(parent == targetContainerSpace) {
-					break;
+					result.push(STRING_FILL);
 				}
 			}
 			
-			return resultArr.reverse().join('');
+			return result.reverse().join('');
 		}
 		
 		/**
