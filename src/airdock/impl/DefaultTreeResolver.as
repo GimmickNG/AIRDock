@@ -1,8 +1,7 @@
 package airdock.impl 
 {
+	import airdock.enums.ContainerSide;
 	import airdock.interfaces.docking.IContainer;
-	import airdock.enums.PanelContainerSide;
-	import airdock.interfaces.docking.IPanel;
 	import airdock.interfaces.docking.ITreeResolver;
 	import flash.display.DisplayObject;
 	import flash.display.DisplayObjectContainer;
@@ -52,55 +51,35 @@ package airdock.impl
 			return currParent as IContainer
 		}
 		
-		/**
-		 * @inheritDoc
-		 */
 		public function serializeCode(targetContainerSpace:IContainer, displayObject:DisplayObject):String
 		{
-			const STRING_FILL:String = PanelContainerSide.STRING_FILL;
-			if(!(targetContainerSpace && displayObject)) {
+			const STRING_FILL:String = ContainerSide.FILL;
+			if(!(targetContainerSpace && displayObject && targetContainerSpace.contains(displayObject))) {
 				return null;
 			}
-			else if(targetContainerSpace == displayObject) {
+			else if(targetContainerSpace == displayObject || findParentContainer(displayObject) == targetContainerSpace) {
 				return STRING_FILL;
 			}
-			else for (var child:DisplayObject = displayObject; child && child != targetContainerSpace; child = child.parent) { }
-			if(!child) {
-				return null;
-			}
-			const SIDE_TO_STRING:Array = PanelContainerSide.getIntegerToStringMap()
-			var resultArr:Vector.<String> = new Vector.<String>();
-			var parent:IContainer, sideObj:IContainer;
-			var currSide:int, oppSide:int;
 			
+			var i:uint;
+			var currSide:String, oppSide:String;
+			var parent:IContainer, sideObj:IContainer;
+			const result:Vector.<String> = new <String>[]
 			for (parent = findParentContainer(displayObject); parent; parent = findParentContainer(parent as DisplayObject))
 			{
 				if (parent.hasSides)
 				{
-					currSide = parent.sideCode
-					sideObj = parent.getSide(currSide)
-					if(sideObj && sideObj.contains(displayObject)) {
-						resultArr.push(SIDE_TO_STRING[currSide])
+					for (i = 0, currSide = parent.sideCode, sideObj = parent.getSide(currSide); i < 2 && !(sideObj && sideObj.contains(displayObject)); ++i, currSide = ContainerSide.getComplementary(currSide), sideObj = parent.getSide(currSide)) {
+						// check both containers to see if they contain the displayObject 
 					}
-					else
-					{
-						currSide = PanelContainerSide.getComplementary(currSide)
-						sideObj = parent.getSide(currSide)
-						if(sideObj && sideObj.contains(displayObject)) {
-							resultArr.push(SIDE_TO_STRING[currSide])
-						}
-					}
+					result.push(currSide)
 				}
 				else {
-					resultArr.push(STRING_FILL);
-				}
-				
-				if(parent == targetContainerSpace) {
-					break;
+					result.push(STRING_FILL);
 				}
 			}
 			
-			return resultArr.reverse().join('');
+			return result.reverse().join('');
 		}
 		
 		/**

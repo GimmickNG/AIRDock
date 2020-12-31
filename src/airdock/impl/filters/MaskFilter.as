@@ -1,9 +1,9 @@
 package airdock.impl.filters 
 {
+	import airdock.interfaces.display.IDisplayFilter;
+	import airdock.interfaces.display.IFilterable;
 	import flash.display.Sprite;
 	import flash.utils.Dictionary;
-	import airdock.interfaces.display.IFilterable;
-	import airdock.interfaces.display.IDisplayFilter;
 	
 	/**
 	 * Mask filter which masks the content of the filterable within its bounds.
@@ -26,7 +26,7 @@ package airdock.impl.filters
 			if(!(filterable in dct_targets)) {
 				dct_targets[filterable] = new Sprite()
 			}
-			var sprite:Sprite = dct_targets[filterable];
+			const sprite:Sprite = dct_targets[filterable];
 			sprite.graphics.clear()
 			sprite.graphics.beginFill(0)
 			sprite.graphics.drawRect(0, 0, filterable.width, filterable.height)
@@ -41,7 +41,7 @@ package airdock.impl.filters
 			if(!(filterable in dct_targets)) {
 				return
 			}
-			var sprite:Sprite = dct_targets[filterable];
+			const sprite:Sprite = dct_targets[filterable];
 			if (sprite.parent == filterable) {
 				filterable.removeChild(sprite);
 			}

@@ -1,12 +1,9 @@
 package airdock.delegates 
 {
-	import airdock.enums.PanelContainerSide;
-	import airdock.events.PanelContainerEvent;
 	import airdock.events.ResizerEvent;
 	import airdock.interfaces.docking.IContainer;
 	import airdock.interfaces.ui.IResizer;
 	import flash.events.Event;
-	import flash.events.IEventDispatcher;
 	import flash.geom.Rectangle;
 	/**
 	 * ...
@@ -14,9 +11,9 @@ package airdock.delegates
 	 */
 	public class ResizerDelegate 
 	{
-		private var i_sideCode:int;
 		private var b_dragging:Boolean;
 		private var cl_resizer:IResizer;
+		private var str_sideCode:String;
 		private var rect_maxSize:Rectangle;
 		private var plc_container:IContainer;
 		public function ResizerDelegate(resizer:IResizer)
@@ -36,7 +33,7 @@ package airdock.delegates
 		
 		public function getDragBounds():Rectangle
 		{
-			var bounds:Rectangle = container.getBounds(cl_resizer.parent)
+			const bounds:Rectangle = container.getBounds(cl_resizer.parent)
 			bounds.height = container.height	//since container overrides width and height
 			bounds.width = container.width		//set to the visible width and height
 			return bounds
@@ -50,12 +47,12 @@ package airdock.delegates
 			b_dragging = value;
 		}
 		
-		public function get sideCode():int {
-			return i_sideCode;
+		public function get sideCode():String {
+			return str_sideCode;
 		}
 		
-		public function set sideCode(value:int):void {
-			i_sideCode = value;
+		public function set sideCode(value:String):void {
+			str_sideCode = value;
 		}
 		
 		public function get container():IContainer {

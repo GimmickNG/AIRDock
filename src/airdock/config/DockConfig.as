@@ -5,6 +5,7 @@ package airdock.config
 	import airdock.interfaces.factories.IContainerFactory;
 	import airdock.interfaces.factories.IPanelFactory;
 	import airdock.interfaces.factories.IPanelListFactory;
+	import airdock.interfaces.strategies.IThumbnailStrategy;
 	import airdock.interfaces.ui.IDockHelper;
 	import airdock.interfaces.ui.IResizer;
 	import flash.display.DisplayObjectContainer;
@@ -26,6 +27,7 @@ package airdock.config
 		private var cl_panelFactory:IPanelFactory
 		private var cl_containerFactory:IContainerFactory
 		private var cl_panelListFactory:IPanelListFactory
+		private var cl_thumbnailStrategy:IThumbnailStrategy;
 		private var dsp_mainContainer:DisplayObjectContainer
 		private var cl_defaultWindowOptions:NativeWindowInitOptions
 		private var cl_defaultContainerOptions:ContainerConfig;
@@ -243,6 +245,18 @@ package airdock.config
 		 */
 		public function set crossDockingPolicy(value:int):void {
 			i_crossDockingPolicy = value;
+		}
+		
+		/**
+		 * Temporary thumbnail strategy implementation.
+		 * @see airdock.interfaces.strategies.IThumbnailStrategy
+		 */
+		public function get thumbnailStrategy():IThumbnailStrategy {
+			return cl_thumbnailStrategy;
+		}
+		
+		public function set thumbnailStrategy(value:IThumbnailStrategy):void {
+			cl_thumbnailStrategy = value;
 		}
 	}
 

@@ -4,7 +4,6 @@ package airdock.delegates
 	import airdock.interfaces.display.IDisplayFilter;
 	import airdock.interfaces.docking.IPanel;
 	import airdock.util.PropertyChangeProxy;
-	import flash.display.DisplayObject;
 	import flash.events.Event;
 	import flash.events.IEventDispatcher;
 	
@@ -15,13 +14,13 @@ package airdock.delegates
 	public class PanelDelegate implements IEventDispatcher
 	{
 		private var cl_basePanel:IPanel;
-		private var cl_changeProxy:PropertyChangeProxy;
-		private var cl_displayFilterDelegate:DisplayFilterDelegate;
+		protected var cl_changeProxy:PropertyChangeProxy;
+		protected var cl_displayFilterDelegate:FilterDelegate;
 		public function PanelDelegate(panel:IPanel)
 		{
 			cl_basePanel = panel;
 			cl_changeProxy = new PropertyChangeProxy(panel)
-			cl_displayFilterDelegate = new DisplayFilterDelegate(panel)
+			cl_displayFilterDelegate = new FilterDelegate(panel)
 		}
 		
 		public function dispatchChanging(property:String, oldValue:Object, newValue:Object):Boolean {
@@ -62,7 +61,7 @@ package airdock.delegates
 		
 		public function get displayFilters():Vector.<IDisplayFilter>
 		{
-			var filters:Vector.<IDisplayFilter> = cl_changeProxy.displayFilters as Vector.<IDisplayFilter>;
+			const filters:Vector.<IDisplayFilter> = cl_changeProxy.displayFilters as Vector.<IDisplayFilter>;
 			return filters && filters.concat();
 		}
 		
@@ -95,6 +94,30 @@ package airdock.delegates
 		
 		public function set dockable(value:Boolean):void {
 			cl_changeProxy.dockable = value
+		}
+		
+		public function get width():Number {
+			return cl_changeProxy.width
+		}
+		
+		public function set width(value:Number):void {
+			cl_changeProxy.width = value;
+		}
+		
+		public function get height():Number {
+			return cl_changeProxy.height
+		}
+		
+		public function set height(value:Number):void {
+			cl_changeProxy.height = value;
+		}
+		
+		public function get backgroundColor():uint {
+			return cl_changeProxy.backgroundColor
+		}
+		
+		public function set backgroundColor(value:uint):void {
+			cl_changeProxy.backgroundColor = value;
 		}
 	}
 

@@ -15,21 +15,21 @@ package airdock.impl
 		 * @inheritDoc
 		 */
 		public function get panelFormat():String {
-			return "dps:panel";
+			return "airdock.impl.format:panel";
 		}
 		
 		/**
 		 * @inheritDoc
 		 */
 		public function get containerFormat():String {
-			return "dps:container";
+			return "airdock.impl.format:container";
 		}
 		
 		/**
 		 * @inheritDoc
 		 */
 		public function get destinationFormat():String {
-			return "dps:destination";
+			return "airdock.impl.format:destination";
 		}
 	}
 

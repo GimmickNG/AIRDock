@@ -1,7 +1,6 @@
 package airdock.delegates 
 {
 	import airdock.events.PanelContainerEvent;
-	import airdock.impl.ui.DefaultPanelList;
 	import airdock.interfaces.docking.IPanel;
 	import airdock.interfaces.ui.IPanelList;
 	import flash.events.Event;
@@ -71,13 +70,13 @@ package airdock.delegates
 		}
 		
 		public function removePanelAt(index:int):IPanel {
-			return vec_panels.splice(index, 1)[0]
+			return vec_panels.splice(index, 1).pop()
 		}
 		
 		public function removePanel(panel:IPanel):IPanel
 		{
 			var result:IPanel;
-			var index:int = getPanelIndex(panel);
+			const index:int = getPanelIndex(panel);
 			if(index != -1) {
 				result = removePanelAt(index);
 			}

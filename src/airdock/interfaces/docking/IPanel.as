@@ -1,13 +1,13 @@
 package airdock.interfaces.docking 
 {
-	import airdock.interfaces.display.IDisplayObjectContainer;
+	import airdock.interfaces.display.IDisplayObject;
 	import airdock.interfaces.display.IFilterable;
 	
 	/**
 	 * The interface defining the set of methods that a (display)object must fulfil in order to participate in docking and other features offered by the Docker instance.
 	 * @author	Gimmick
 	 */
-	public interface IPanel extends IDisplayObjectContainer, IFilterable
+	public interface IPanel extends IFilterable, IDisplayObject
 	{		
 		/**
 		 * The default width of the panel instance; parked containers and their windows are initially created with this width.

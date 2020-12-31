@@ -27,7 +27,7 @@ package airdock.util
 		
 		override flash_proxy function callProperty(methodName:*, ...args):*
 		{
-			var functor:Function = getProperty(methodName) as Function
+			const functor:Function = getProperty(methodName) as Function
 			if (functor != null) {
 				return functor.apply(null, args);
 			}
@@ -39,7 +39,7 @@ package airdock.util
 			if (hasProperty(name) && !dispatchChanging(name, getProperty(name), null)) {
 				return false;
 			}
-			var result:Boolean = delete dct_elements[name];
+			const result:Boolean = delete dct_elements[name];
 			return result;
 		}
 		
@@ -67,7 +67,7 @@ package airdock.util
 		{
 			if (!index)
 			{
-				var propNames:Vector.<String> = vec_properties;
+				const propNames:Vector.<String> = vec_properties;
 				propNames.length = 0;
 				for (var obj:String in dct_elements) {
 					propNames.push(obj);
@@ -85,7 +85,7 @@ package airdock.util
 		
 		override flash_proxy function setProperty(name:*, value:*):void
 		{
-			var prevValue:* = getProperty(name);
+			const prevValue:* = getProperty(name);
 			if (prevValue === value || !dispatchChanging(name, prevValue, value)) {
 				return;
 			}

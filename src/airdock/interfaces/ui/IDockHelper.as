@@ -1,6 +1,6 @@
 package airdock.interfaces.ui 
 {
-	import airdock.interfaces.display.IDisplayObject;
+	import airdock.interfaces.display.IDynamicSize;
 	import airdock.interfaces.ui.IDockTarget;
 	import flash.display.DisplayObject;
 	import flash.events.IEventDispatcher;
@@ -14,7 +14,7 @@ package airdock.interfaces.ui
 	 * @author	Gimmick
 	 * @see	airdock.interfaces.docking.IDockTarget
 	 */
-	public interface IDockHelper extends IDisplayObject, IDockTarget
+	public interface IDockHelper extends IDockTarget, IDynamicSize, IEventDispatcher
 	{
 		/**
 		 * Hides the candidate instances specified in the list.
@@ -31,30 +31,11 @@ package airdock.interfaces.ui
 		function show(targets:Vector.<DisplayObject> = null):void;
 		
 		/**
-		 * Gets the default width of the dock helper. The Docker uses this information to set the width of the current dock helper.
-		 * @return	The default width of the current dock helper.
-		 */
-		function getDefaultWidth():Number;
-		
-		/**
-		 * Gets the default height of the dock helper. The Docker uses this information to set the height of the current dock helper.
-		 * @return	The default height of the current dock helper.
-		 */
-		function getDefaultHeight():Number;
-		
-		/**
-		 * Draws the dock helper's graphical content. This is automatically called by the Docker when the dock helper is being set up, i.e. (usually) at the time of creation of the Docker.
-		 * @param	width	The maximum width which the content can occupy.
-		 * @param	height	The maximum height which the content can occupy.
-		 */
-		function draw(width:Number, height:Number):void;
-		
-		/**
 		 * Sets the dock format to let the dock helper decide whether to accept or reject any native drag/drop events occurring over it.
 		 * @param	panelFormat	The clipboard format string for a panel.
 		 * @param	containerFormat	The clipboard format string for a container.
 		 */
-		function setDockFormat(panelFormat:String, containerFormat:String):void;
+		function setDockFormats(panelFormat:String, containerFormat:String):void;
 	}
 	
 }

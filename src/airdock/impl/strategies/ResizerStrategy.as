@@ -1,16 +1,16 @@
 package airdock.impl.strategies 
 {
-	import airdock.enums.PanelContainerSide;
+	import airdock.enums.ContainerSide;
 	import airdock.events.PanelContainerEvent;
 	import airdock.events.PropertyChangeEvent;
 	import airdock.events.ResizerEvent;
-	import airdock.util.IDisposable;
-	import airdock.interfaces.strategies.IDockerStrategy;
 	import airdock.interfaces.docking.IBasicDocker;
 	import airdock.interfaces.docking.IContainer;
 	import airdock.interfaces.docking.ICustomizableDocker;
 	import airdock.interfaces.docking.ITreeResolver;
+	import airdock.interfaces.strategies.IDockerStrategy;
 	import airdock.interfaces.ui.IResizer;
+	import airdock.util.IDisposable;
 	import flash.display.DisplayObject;
 	import flash.display.DisplayObjectContainer;
 	import flash.events.Event;
@@ -42,7 +42,7 @@ package airdock.impl.strategies
 			if(!(baseDocker && baseDocker is ICustomizableDocker)) {
 				throw new ArgumentError("Error: Argument baseDocker must be a non-null ICustomizableDocker instance.");
 			}
-			var customizableDocker:ICustomizableDocker = ICustomizableDocker(baseDocker);
+			const customizableDocker:ICustomizableDocker = ICustomizableDocker(baseDocker);
 			addResizerListeners(customizableDocker.resizeHelper);
 			cl_hostDocker = customizableDocker;
 			addDockerListeners(baseDocker);
@@ -67,7 +67,7 @@ package airdock.impl.strategies
 		
 		private function changeResizerListeners(evt:PropertyChangeEvent):void 
 		{
-			var oldResizer:IResizer = evt.oldValue as IResizer, newResizer:IResizer = evt.newValue as IResizer
+			const oldResizer:IResizer = evt.oldValue as IResizer, newResizer:IResizer = evt.newValue as IResizer
 			if (newResizer && oldResizer != newResizer)
 			{
 				addResizerListeners(newResizer)
@@ -116,7 +116,7 @@ package airdock.impl.strategies
 		{
 			if (resizer)
 			{
-				var resizerParent:DisplayObjectContainer = resizer.parent;
+				const resizerParent:DisplayObjectContainer = resizer.parent;
 				if(resizer.isDragging) {
 					evt.preventDefault();
 				}
@@ -132,19 +132,19 @@ package airdock.impl.strategies
 				return;
 			}
 			
+			const currContainer:IContainer = evt.container;
+			const orientation:String = evt.sideCode;
 			var size:Number = evt.position;
-			var orientation:int = evt.sideCode;
-			var currContainer:IContainer = evt.container;
 			if(size < 0.0) {
 				size = 0.0;
 			}
 			else if (size > 1.0)
 			{
 				var maxSize:Number;	//get maximum allowed size (width or height, based on side) since absolute size
-				if (PanelContainerSide.isComplementary(orientation, PanelContainerSide.LEFT)) {
+				if (ContainerSide.isComplementary(orientation, ContainerSide.LEFT)) {
 					maxSize = currContainer.width;
 				}
-				else if (PanelContainerSide.isComplementary(orientation, PanelContainerSide.TOP)) {
+				else if (ContainerSide.isComplementary(orientation, ContainerSide.TOP)) {
 					maxSize = currContainer.height;
 				}
 				
@@ -169,31 +169,46 @@ package airdock.impl.strategies
 		 */
 		private function setResizerTargetOnEvent(evt:MouseEvent):void 
 		{
-			var target:DisplayObject = evt.target as DisplayObject
+			const target:DisplayObject = evt.target as DisplayObject
 			if(target is IResizer || !resizer || resizer.isDragging) {
-				return;	//resizer does not exist, or already has target; do not recalculate
+				return;								//resizer does not exist, or already has target; do not recalculate
 			}
 			var targetContainer:IContainer = (target as IContainer) || treeResolver.findParentContainer(target)
 			var container:IContainer = treeResolver.findParentContainer(targetContainer as DisplayObject)
 			if (container)
 			{
-				var side:int;
-				var point:Point;
+				var point:Point, side:String;
 				var tolerance:Number = resizer.tolerance
-				var localXPercent:Number = targetContainer.mouseX / targetContainer.width
-				var localYPercent:Number = targetContainer.mouseY / targetContainer.height
+				var xThreshold:Number, yThreshold:Number
+				var scaleFactorX:Number, scaleFactorY:Number;
+				const mouseXPos:Number = targetContainer.mouseX, mouseYPos:Number = targetContainer.mouseY
 				
-				if (localXPercent <= tolerance) {
-					side = PanelContainerSide.LEFT;		//left edge
+				if (tolerance > 1.0)
+				{
+					scaleFactorY = targetContainer.height
+					scaleFactorX = targetContainer.width
+					tolerance = int(tolerance);		//since we're dealing with pixels here
+					xThreshold = mouseXPos
+					yThreshold = mouseYPos
 				}
-				else if(localXPercent >= (1 - tolerance)) {
-					side = PanelContainerSide.RIGHT;	//right edge
+				else
+				{
+					scaleFactorX = scaleFactorY = 1.0;
+					xThreshold = mouseXPos / targetContainer.width;
+					yThreshold = mouseYPos / targetContainer.height;
 				}
-				else if (localYPercent <= tolerance) {
-					side = PanelContainerSide.TOP;		//top edge
+				
+				if (xThreshold <= tolerance) {
+					side = ContainerSide.LEFT;		//left edge
 				}
-				else if(localYPercent >= (1 - tolerance)) {
-					side = PanelContainerSide.BOTTOM;	//bottom edge
+				else if(xThreshold >= (scaleFactorX - tolerance)) {
+					side = ContainerSide.RIGHT;		//right edge
+				}
+				else if (yThreshold <= tolerance) {
+					side = ContainerSide.TOP;		//top edge
+				}
+				else if(yThreshold >= (scaleFactorY - tolerance)) {
+					side = ContainerSide.BOTTOM;	//bottom edge
 				}
 				else 
 				{
@@ -260,7 +275,7 @@ package airdock.impl.strategies
 				var displayResizer:Boolean;
 				while (container)
 				{
-					if (PanelContainerSide.isComplementary(side, container.sideCode))
+					if (ContainerSide.isComplementary(side, container.sideCode))
 					{
 						var targetContainerEqual:Boolean = (container.getSide(container.sideCode) == targetContainer);
 						var sidesMatch:Boolean = (side == container.sideCode);
@@ -276,15 +291,23 @@ package airdock.impl.strategies
 				if (container && displayResizer)
 				{
 					point = new Point(targetContainer.x, targetContainer.y)
-					if (PanelContainerSide.isComplementary(side, PanelContainerSide.TOP)) {
-						point.offset(resizer.preferredXPercentage * targetContainer.width, Math.round(localYPercent) * targetContainer.height)
+					if (ContainerSide.isComplementary(side, ContainerSide.TOP))
+					{
+						point.x += resizer.preferredXPercentage * targetContainer.width;
+						if ((yThreshold / scaleFactorY) >= 0.5) {
+							point.y += targetContainer.height
+						}
 					}
-					else {
-						point.offset(Math.round(localXPercent) * targetContainer.width, resizer.preferredYPercentage * targetContainer.height)
+					else
+					{
+						if ((xThreshold / scaleFactorX) >= 0.5) {
+							point.x += targetContainer.width;
+						}
+						point.y += resizer.preferredYPercentage * targetContainer.height
 					}
 					point = container.localToGlobal(point)
 					
-					var containerBounds:Rectangle = container.getBounds(null)
+					const containerBounds:Rectangle = container.getBounds(null)
 					containerBounds.height = container.height	//set height and width to intended
 					containerBounds.width = container.width		//container size - not actual
 					resizer.maxSize = containerBounds
@@ -318,7 +341,7 @@ package airdock.impl.strategies
 		private function removeResizerListeners(resizer:IResizer):void
 		{
 			if (resizer) {
-				resizer.removeEventListener(PanelContainerEvent.RESIZING, resizeNestedContainerOnEvent)
+				resizer.removeEventListener(ResizerEvent.RESIZING, resizeNestedContainerOnEvent)
 			}
 		}
 		

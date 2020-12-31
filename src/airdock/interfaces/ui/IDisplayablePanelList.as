@@ -1,6 +1,6 @@
 package airdock.interfaces.ui 
 {
-	import airdock.interfaces.display.IDisplayObject;
+	import airdock.interfaces.display.IDynamicSize;
 	import flash.geom.Point;
 	import flash.geom.Rectangle;
 	
@@ -9,13 +9,8 @@ package airdock.interfaces.ui
 	 * Additional methods involving placement and sizing of the panel list are included here.
 	 * @author	Gimmick
 	 */
-	public interface IDisplayablePanelList extends IPanelList, IDisplayObject
+	public interface IDisplayablePanelList extends IPanelList, IDynamicSize
 	{
-		/**
-		 * A Point indicating the preferred location of the current panel list, based on the max width and height specified for it.
-		 */
-		function get preferredLocation():Point;
-		
 		/**
 		 * A Rectangle indicating the region that is available for the panels in the container to take up.
 		 * Each panel in the container has its x, y, width and height set to match that of the visibleRegion attribute.
@@ -24,20 +19,6 @@ package airdock.interfaces.ui
 		 * Values greater than the maxWidth and maxHeight can cause the panel list's container to function improperly when resizing.
 		 */
 		function get visibleRegion():Rectangle;
-		
-		/**
-		 * The maximum height available to the panel list. This is automatically set by the current panel list's container, prior to calling its other methods.
-		 * Other methods, such as preferredLocation and visibleRegion, are derived from this attribute.
-		 */
-		function get maxHeight():Number;
-		function set maxHeight(value:Number):void;
-		
-		/**
-		 * The maximum width available to the panel list. This is automatically set by the current panel list's container, prior to calling its other methods.
-		 * Other methods, such as preferredLocation and visibleRegion, are derived from this attribute.
-		 */
-		function get maxWidth():Number;
-		function set maxWidth(value:Number):void;
 	}
 	
 }

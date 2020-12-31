@@ -1,7 +1,5 @@
 package airdock.interfaces.display 
 {
-	import flash.display.DisplayObject;
-	
 	/**
 	 * The interface that identifies a class as a display filter.
 	 * Display filters are executed by classes which support runtime display filtering.
@@ -9,7 +7,7 @@ package airdock.interfaces.display
 	 * @see airdock.interfaces.display.IFilterable
 	 * @author	Gimmick
 	 */
-	public interface IDisplayFilter 
+	public interface IDisplayFilter
 	{
 		/**
 		 * Executes the filter on the supplied filterable instance.

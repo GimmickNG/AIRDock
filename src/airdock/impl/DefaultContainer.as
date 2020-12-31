@@ -1,27 +1,20 @@
 package airdock.impl 
 {
 	import airdock.delegates.ContainerDelegate;
-	import airdock.enums.PanelContainerSide;
+	import airdock.enums.ContainerSide;
 	import airdock.events.PanelContainerEvent;
 	import airdock.events.PropertyChangeEvent;
 	import airdock.interfaces.display.IDisplayFilter;
-	import airdock.interfaces.docking.IPanel;
 	import airdock.interfaces.docking.IContainer;
-	import airdock.interfaces.ui.IDockHelper;
-	import airdock.interfaces.display.IDisplayObjectContainer;
+	import airdock.interfaces.docking.IPanel;
 	import airdock.interfaces.ui.IDisplayablePanelList;
 	import airdock.interfaces.ui.IPanelList;
-	import flash.desktop.NativeDragActions;
-	import flash.desktop.NativeDragManager;
 	import flash.display.DisplayObject;
-	import flash.display.DisplayObjectContainer;
 	import flash.display.Sprite;
 	import flash.events.Event;
 	import flash.events.EventPhase;
-	import flash.events.NativeDragEvent;
 	import flash.geom.Point;
 	import flash.geom.Rectangle;
-	import flash.utils.getQualifiedClassName;
 	
 	/**
 	 * Dispatched when a subcontainer is emptied, and this container is to be flattened (by having the other subcontainer merge into it.)
@@ -51,12 +44,6 @@ package airdock.impl
 	[Event(name="pcContainerCreated", type="airdock.events.PanelContainerEvent")]
 	
 	/**
-	 * Dispatched whenever a container has had its size (width, height, or both) changed.
-	 * @eventType	airdock.events.PanelContainerEvent.RESIZED
-	 */
-	[Event(name="pcContainerResized", type="airdock.events.PanelContainerEvent")]
-	
-	/**
 	 * Dispatched when a panel is added directly to this container.
 	 * @eventType	airdock.events.PanelContainerEvent.PANEL_ADDED
 	 */
@@ -83,39 +70,68 @@ package airdock.impl
 			maxSideSize = 1.0;
 			minSideSize = 0.0;
 			width = height = 128;
-			sideCode = PanelContainerSide.FILL;
-			addEventListener(PropertyChangeEvent.PROPERTY_CHANGING, updateSizeOnRedraw, false, 0, true)
+			sideCode = ContainerSide.FILL;
+			
+			addEventListener(PanelContainerEvent.PANEL_REMOVE_REQUESTED, removePanelOnEvent, false, 0, true)
+			addEventListener(PanelContainerEvent.PANEL_REMOVED, showOtherPanelOnRemoved, false, 0, true)
 			addEventListener(PropertyChangeEvent.PROPERTY_CHANGED, updateContainer, false, 0, true)
+			addEventListener(PanelContainerEvent.PANEL_ADDED, showPanelOnAdded, false, 0, true)
+			addEventListener(PanelContainerEvent.SHOW_REQUESTED, bumpPanelToTop, false, 0, true)
+			
+			addEventListener(PanelContainerEvent.PANEL_ADDED, applyFiltersOnEvent, false, 0, true)
+			addEventListener(PanelContainerEvent.PANEL_REMOVED, applyFiltersOnEvent, false, 0, true)
+			
 			otherSide = currentSide = null;
 			addChildUpdateListeners();
 			panelList = null;
 		}
 		
-		private function updateSizeOnRedraw(evt:PropertyChangeEvent):void 
+		private function applyFiltersOnEvent(evt:PanelContainerEvent):void {
+			cl_containerDelegate.applyFilters(displayFilters)
+		}
+		
+		private function showPanelOnAdded(evt:PanelContainerEvent):void 
 		{
-			var value:Number = Number(evt.newValue)
-			if(evt.isDefaultPrevented() || evt.target != this) {
-				return;
-			}
-			else switch(evt.fieldName)
+			const panels:Vector.<IPanel> = getPanels(false);
+			evt.relatedPanels.forEach(function(item:IPanel, index:int, array:Vector.<IPanel>):void
 			{
-				case "width":
-					redraw(value, height);
-					break;
-				case "height":
-					redraw(width, value);
-					break;
-			}
+				if (panels.indexOf(item) != -1) {
+					showPanel(item)
+				}
+			});
+		}
+		
+		private function showOtherPanelOnRemoved(evt:PanelContainerEvent):void 
+		{
+			const relatedPanels:Vector.<IPanel> = evt.relatedPanels;
+			showPanel(getPanels(false).filter(function(item:IPanel, index:int, array:Vector.<IPanel>):Boolean {
+				return relatedPanels.indexOf(item) == -1;
+			}).pop());
 		}
 		
 		private function updateContainer(evt:PropertyChangeEvent):void 
 		{
-			if (evt.target == this)
+			const value:Number = Number(evt.newValue)
+			if (evt.target is IPanel)
 			{
-				var value:Number = Number(evt.newValue)
+				const currPanel:IPanel = evt.target as IPanel
+				if (panelList && currPanel && currPanel.parent == this && evt.eventPhase == EventPhase.BUBBLING_PHASE) {
+					panelList.updatePanel(currPanel)
+				}
+			}
+			else if (evt.target == this)
+			{
 				switch(evt.fieldName)
 				{
+					case "width":
+						redraw(value, height)
+						break;
+					case "height":
+						redraw(width, value)
+						break;
 					case "sideSize":
+					case "panelList":
+					case "displayFilters":
 						render();
 						break;
 					case "maxSideSize":
@@ -130,34 +146,27 @@ package airdock.impl
 						break;
 				}
 			}
-			else 
-			{
-				var currPanel:IPanel = evt.target as IPanel
-				if (panelList && currPanel && currPanel.parent == this && evt.eventPhase == EventPhase.BUBBLING_PHASE) {
-					panelList.updatePanel(currPanel)
-				}
-			}
 		}
 		
 		private function addChildUpdateListeners():void
 		{
-			addEventListener(Event.ADDED, updatePanelListOnEvent, false, 0, true)
-			addEventListener(Event.REMOVED, updatePanelListOnEvent, false, 0, true)
+			addEventListener(Event.ADDED, updateContentsOnEvent, false, 0, true)
+			addEventListener(Event.REMOVED, updateContentsOnEvent, false, 0, true)
 			addEventListener(Event.REMOVED, dispatchRemoveOnEmpty, false, 0, true)
 		}
 		
 		private function removeChildUpdateListeners():void
 		{
 			removeEventListener(Event.REMOVED, dispatchRemoveOnEmpty)
-			removeEventListener(Event.REMOVED, updatePanelListOnEvent)
-			removeEventListener(Event.ADDED, updatePanelListOnEvent)
+			removeEventListener(Event.REMOVED, updateContentsOnEvent)
+			removeEventListener(Event.ADDED, updateContentsOnEvent)
 		}
 		
 		private function dispatchRemoveOnEmpty(evt:Event):void 
 		{
-			var target:IPanel = evt.target as IPanel;
-			var panels:Vector.<IPanel> = getPanels(true);
-			if (target && (!panels.length || (panels.length <= 1 && panels.indexOf(target) != -1)))
+			const target:IPanel = evt.target as IPanel;
+			const panels:Vector.<IPanel> = getPanels(true);
+			if (target && (panels.length <= 1 && panels.indexOf(target) != -1))
 			{
 				cl_containerDelegate.clearFilters(displayFilters)
 				dispatchEvent(new PanelContainerEvent(PanelContainerEvent.CONTAINER_REMOVE_REQUESTED, panels, this, true, true))
@@ -174,14 +183,18 @@ package airdock.impl
 				if (!recursive) {
 					return 0;
 				}
-				var removeFromCurrentSide:int = currentSide.removePanels(true);
-				var removeFromOtherSide:int = otherSide.removePanels(true);
-				setContainers(PanelContainerSide.FILL, null, null);
+				//cache sides in case they're removed in between
+				const oppSide:IContainer = otherSide
+				const currSide:IContainer = currentSide
+				const removeFromOtherSide:int = oppSide.removePanels(true);
+				const removeFromCurrentSide:int = currSide.removePanels(true);
+				
+				setContainers(ContainerSide.FILL, null, null);
 				return (removeFromCurrentSide + removeFromOtherSide);
 			}
 			else
 			{
-				var panelArray:Vector.<IPanel> = getPanels(false);
+				const panelArray:Vector.<IPanel> = getPanels(false);
 				panelArray.forEach(function clearContainer(panel:IPanel, index:int, array:Vector.<IPanel>):void {
 					removePanel(panel);
 				});
@@ -200,7 +213,7 @@ package airdock.impl
 			otherSide.flattenContainer()
 			currentSide.flattenContainer()
 			otherSide.mergeIntoContainer(this)
-			setContainers(PanelContainerSide.FILL, null, null)	//this may not be necessary since otherSide will anyways have side FILL and no subcontainers; keep it just in case?
+			setContainers(ContainerSide.FILL, null, null)	//this may not be necessary since otherSide will anyways have side FILL and no subcontainers; keep it just in case?
 			return true;
 		}
 		
@@ -216,8 +229,10 @@ package airdock.impl
 		 */
 		public function set panelList(panelList:IPanelList):void
 		{
-			removePanelListListeners(this.panelList)
-			if (displayablePanelList && displayablePanelList.parent == this) {
+			if(panelList == this.panelList) {
+				return;
+			}
+			else if (displayablePanelList && displayablePanelList.parent == this) {
 				removeChild(displayablePanelList)
 			}
 			
@@ -231,7 +246,6 @@ package airdock.impl
 					displayablePanelList = DisplayObject(panelList)	//hard cast to throw error if panelList is not of type DisplayObject
 				}
 			}
-			addPanelListListeners(panelList)
 		}
 		
 		private function get displayablePanelList():DisplayObject {
@@ -243,32 +257,9 @@ package airdock.impl
 			if(!displayable) {
 				return;
 			}
-			var displayableList:IDisplayablePanelList = displayable as IDisplayablePanelList
-			displayableList.maxHeight = height;
-			displayableList.maxWidth = width;
+			const displayableList:IDisplayablePanelList = displayable as IDisplayablePanelList
+			displayableList.draw(width, height)
 			addChild(displayable)
-		}
-		
-		private function removePanelListListeners(panelList:IPanelList):void 
-		{
-			if(!panelList) {
-				return;
-			}
-			panelList.removeEventListener(PanelContainerEvent.SHOW_REQUESTED, bumpPanelToTop)
-			panelList.removeEventListener(PanelContainerEvent.DRAG_REQUESTED, sendDockPanelRequest)
-			panelList.removeEventListener(PanelContainerEvent.PANEL_REMOVE_REQUESTED, removePanelOnEvent)
-			panelList.removeEventListener(PanelContainerEvent.STATE_TOGGLE_REQUESTED, sendDockPanelRequest)
-		}
-		
-		private function addPanelListListeners(panelList:IPanelList):void 
-		{
-			if(!panelList) {
-				return;
-			}
-			panelList.addEventListener(PanelContainerEvent.STATE_TOGGLE_REQUESTED, sendDockPanelRequest, false, 0, true)
-			panelList.addEventListener(PanelContainerEvent.PANEL_REMOVE_REQUESTED, removePanelOnEvent, false, 0, true)
-			panelList.addEventListener(PanelContainerEvent.DRAG_REQUESTED, sendDockPanelRequest, false, 0, true)
-			panelList.addEventListener(PanelContainerEvent.SHOW_REQUESTED, bumpPanelToTop, false, 0, true)
 		}
 		
 		private function removePanelOnEvent(evt:PanelContainerEvent):void
@@ -316,7 +307,7 @@ package airdock.impl
 			}
 			else
 			{
-				var container:IContainer = findPanel(panel);
+				const container:IContainer = findPanel(panel);
 				if(container) {
 					return container.showPanel(panel);
 				}
@@ -341,7 +332,7 @@ package airdock.impl
 			}
 			else
 			{
-				var container:IContainer = findPanel(panel);
+				const container:IContainer = findPanel(panel);
 				if(container) {
 					return container.isPanelVisible(panel);
 				}
@@ -349,35 +340,20 @@ package airdock.impl
 			return false;
 		}
 		
-		private function sendDockPanelRequest(evt:PanelContainerEvent):void
+		private function updateContentsOnEvent(evt:Event):void 
 		{
-			evt.stopImmediatePropagation();
-			if(evt.isDefaultPrevented()) {
-				return;
-			}
-			var relatedPanels:Vector.<IPanel> = evt.relatedPanels
-			if (dispatchEvent(new PanelContainerEvent(evt.type, relatedPanels, this, true, true)) && relatedPanels && relatedPanels.length)
-			{
-				var panelList:Vector.<IPanel> = getPanels(false).filter(function getListDifference(item:IPanel, index:int, array:Vector.<IPanel>):Boolean {
-					return item && relatedPanels.indexOf(item) == -1;	//search and show a panel that's not any of the related panels
-				});
-				showPanel(panelList.pop())
-			}
-		}
-		
-		private function updatePanelListOnEvent(evt:Event):void 
-		{
-			var panel:IPanel = evt.target as IPanel;
-			var panelList:IPanelList = this.panelList;
+			const panel:IPanel = evt.target as IPanel;
+			const panelList:IPanelList = this.panelList;
 			if (!(panel && evt.eventPhase == EventPhase.BUBBLING_PHASE && panel.parent == this)) {
 				return;
 			}
-			else if (panelList)
+			
+			if (panelList)
 			{
 				if (evt.type == Event.REMOVED) {
 					panelList.removePanel(panel)
 				}
-				else
+				else if(evt.type == Event.ADDED)
 				{
 					panelList.addPanelAt(panel, getChildIndex(panel as DisplayObject))
 					if(displayablePanelList) {
@@ -385,7 +361,7 @@ package airdock.impl
 					}
 				}
 				
-				for (var i:int = numChildren - 1, child:IPanel; !child && i >= 0; --i, child = getChildAt(i) as IPanel)
+				for (var i:int = numChildren - 1, child:IPanel; !child && i >= 0; child = getChildAt(i) as IPanel, --i)
 				{
 					if (child) {
 						panelList.showPanel(child);
@@ -395,6 +371,13 @@ package airdock.impl
 			else {
 				dispatchEvent(new PanelContainerEvent(PanelContainerEvent.SETUP_REQUESTED, null, this, true, true));
 			}
+			
+			if (evt.type == Event.REMOVED) {
+				dispatchEvent(new PanelContainerEvent(PanelContainerEvent.PANEL_REMOVED, new <IPanel>[panel], this, true, false))
+			}
+			else if(evt.type == Event.ADDED) {
+				dispatchEvent(new PanelContainerEvent(PanelContainerEvent.PANEL_ADDED, new <IPanel>[panel], this, true, false))
+			}
 		}
 		
 		/**
@@ -402,63 +385,31 @@ package airdock.impl
 		 */
 		public function mergeIntoContainer(container:IContainer):void
 		{
-			if(container == this) {
+			if(!container || container == this) {
 				return;
 			}
 			cl_containerDelegate.clearFilters(displayFilters)	//remove all filters, in case they have added children of their own via apply()
-			if (hasSides && hasSides == container.hasSides && PanelContainerSide.isComplementary(sideCode, container.sideCode))
+			//NOTE: Should the container to be merged call mergeIntoContainer() on the destination, or the other way around?
+			container.setContainers(sideCode, currentSide, otherSide);
+			removeChildUpdateListeners();	//remove listener since we don't want this to occur while we're anyways emptying the container
+			getPanels(false).forEach(function addPanelToContainer(item:IPanel, index:int, array:Vector.<IPanel>):void {
+				container.addToSide(ContainerSide.FILL, item);
+			});
+			const children:Vector.<DisplayObject> = new Vector.<DisplayObject>()
+			for (var i:int = 0; i < numChildren; ++i)
 			{
-				/* Merges two containers if they have same number of sides, and are complementary.
-				 * For example, suppose two trees exist:
-				 *          A             H
-				 *        B   C         I   J
-				 *       d e f g       k l m n
-				 * 
-				 * where the leafs [d, e, f, g] and [k, l, m, n] are panels
-				 * Then, merging H into A should yield:
-				 *                 A
-				 *           B           C
-				 *       d,k   e,l   f,m   g,n
-				 * Or if the sides are not the same, and it has to be flipped for H prior to merging
-				 * (assuming only the level under A has to be flipped; otherwise, recursively flip as needed)
-				 *                 A
-				 *           B           C
-				 *       D,M   E,N   F,K   G,L
-				 */
-				var tempCont:IContainer = currentSide, otherCont:IContainer = otherSide;
-				var containerSideCode:int = container.sideCode
-				if (sideCode != containerSideCode)
-				{
-					otherCont = currentSide;	//is not equal;
-					tempCont = otherSide;		//flip sides
+				var currChild:DisplayObject = getChildAt(i)
+				if (!(currChild == displayablePanelList || currChild == currentSide || currChild == otherSide)) {
+					children.push(currChild);
 				}
-				tempCont.mergeIntoContainer(container.getSide(containerSideCode))
-				otherCont.mergeIntoContainer(container.getSide(PanelContainerSide.getComplementary(containerSideCode)))
 			}
-			else
-			{
-				//NOTE: Should the container to be merged call mergeIntoContainer() on the destination, or the other way around?
-				container.setContainers(sideCode, currentSide, otherSide);
-				removeChildUpdateListeners();	//remove listener since we don't want this to occur while we're anyways emptying the container
-				getPanels(false).forEach(function addPanelToContainer(item:IPanel, index:int, array:Vector.<IPanel>):void {
-					container.addToSide(PanelContainerSide.FILL, item);
-				});
-				var children:Vector.<DisplayObject> = new Vector.<DisplayObject>()
-				for (var i:uint = 0; i < numChildren; ++i)
-				{
-					var currChild:DisplayObject = getChildAt(i)
-					if (!(currChild == displayablePanelList || currChild == currentSide || currChild == otherSide)) {
-						children.push(currChild);
-					}
-				}
-				children.forEach(function addAsDirectChild(item:DisplayObject, index:int, array:Vector.<DisplayObject>):void {
-					container.addChild(item);
-				});
-				addChildUpdateListeners();
-				setContainers(PanelContainerSide.FILL, null, null)
-				if(container.panelList is IDisplayablePanelList) {
-					container.setChildIndex(container.panelList as DisplayObject, container.numChildren - 1)
-				}
+			children.forEach(function addAsDirectChild(item:DisplayObject, index:int, array:Vector.<DisplayObject>):void {
+				container.addChild(item);
+			});
+			addChildUpdateListeners();
+			setContainers(ContainerSide.FILL, null, null)
+			if(container.panelList is IDisplayablePanelList) {
+				container.setChildIndex(container.panelList as DisplayObject, container.numChildren - 1)
 			}
 			container.sideSize = sideSize
 			container.minSideSize = minSideSize
@@ -469,10 +420,10 @@ package airdock.impl
 		/**
 		 * @inheritDoc
 		 */
-		public function setContainers(sideCode:int, currentSide:IContainer, otherSide:IContainer):void
+		public function setContainers(sideCode:String, currentSide:IContainer, otherSide:IContainer):void
 		{
-			var prevCurrentSide:DisplayObject = this.currentSide as DisplayObject;
-			var prevOtherSide:DisplayObject = this.otherSide as DisplayObject;
+			const prevCurrentSide:DisplayObject = this.currentSide as DisplayObject;
+			const prevOtherSide:DisplayObject = this.otherSide as DisplayObject;
 			if(prevCurrentSide && prevCurrentSide.parent == this) {
 				removeChild(prevCurrentSide)
 			}
@@ -549,7 +500,7 @@ package airdock.impl
 				}
 			}
 			if (recursive && hasSides) {
-				result = result.concat(currentSide.getPanels(true).concat(otherSide.getPanels(true)));
+				result = result.concat(currentSide.getPanels(true), otherSide.getPanels(true));
 			}
 			return result;
 		}
@@ -557,9 +508,9 @@ package airdock.impl
 		/**
 		 * @inheritDoc
 		 */
-		public function getSide(side:int):IContainer
+		public function getSide(side:String):IContainer
 		{
-			if(side == PanelContainerSide.FILL) {
+			if(side == ContainerSide.FILL) {
 				return this;
 			}
 			else if (hasSides)
@@ -567,7 +518,7 @@ package airdock.impl
 				if(sideCode == side) {
 					return currentSide
 				}
-				else if(PanelContainerSide.isComplementary(sideCode, side)) {
+				else if(ContainerSide.isComplementary(sideCode, side)) {
 					return otherSide
 				}
 			}
@@ -577,19 +528,18 @@ package airdock.impl
 		/**
 		 * @inheritDoc
 		 */
-		public function addToSide(side:int, panel:IPanel):IContainer
+		public function addToSide(side:String, panel:IPanel):IContainer
 		{
-			var container:IContainer = getSide(side)
+			const container:IContainer = fetchSide(side)
 			if (container == this)
 			{
-				var displayablePanel:DisplayObject = panel as DisplayObject
+				const displayablePanel:DisplayObject = panel as DisplayObject
 				if (displayablePanelList)
 				{
-					var rect:Rectangle;
-					var displayableList:IDisplayablePanelList = panelList as IDisplayablePanelList;
-					displayableList.maxWidth = width;
-					displayableList.maxHeight = height;
-					rect = displayableList.visibleRegion;
+					const displayableList:IDisplayablePanelList = panelList as IDisplayablePanelList;
+					displayableList.draw(width, height)
+					
+					const rect:Rectangle = displayableList.visibleRegion;
 					displayablePanel.height = rect.height;
 					displayablePanel.width = rect.width;
 					displayablePanel.x = rect.x
@@ -604,20 +554,14 @@ package airdock.impl
 				
 				for (var index:int = numChildren - 1; index >= 0 && !(getChildAt(index) is IPanel); --index) { /*gets topmost panel*/ }
 				addChildAt(displayablePanel, index + 1)	//adds panels above the previously highest panel, so as to not obscure filters, etc.
-				dispatchEvent(new PanelContainerEvent(PanelContainerEvent.PANEL_ADDED, new <IPanel>[panel], this, true, false))
 			}
-			else
-			{
-				if (!container) {
-					addContainer(PanelContainerSide.getComplementary(side), createContainer())
-				}
-				container = getSide(side);
-				container.addToSide(PanelContainerSide.FILL, panel)
+			else {
+				container.addToSide(ContainerSide.FILL, panel)
 			}
 			return container
 		}
 		
-		private function resizeContainers(side:int, maxWidth:Number, maxHeight:Number, sideSize:Number, sideContainer:IContainer, otherContainer:IContainer):void 
+		private function resizeContainers(side:String, maxWidth:Number, maxHeight:Number, sideSize:Number, sideContainer:IContainer, otherContainer:IContainer):void 
 		{
 			if(!(sideContainer || otherContainer)) {
 				return;
@@ -625,7 +569,7 @@ package airdock.impl
 			var swap:Number;
 			var sideX:Number = 0, sideY:Number = 0, sideWidth:Number, sideHeight:Number;
 			var otherSideX:Number, otherSideY:Number, otherSideWidth:Number, otherSideHeight:Number;
-			if (PanelContainerSide.isComplementary(side, PanelContainerSide.LEFT))
+			if (ContainerSide.isComplementary(side, ContainerSide.LEFT))
 			{
 				otherSideHeight = sideHeight = maxHeight;
 				sideWidth = sideSize
@@ -651,7 +595,8 @@ package airdock.impl
 				otherSideY = sideHeight
 				otherSideHeight = maxHeight - sideHeight
 			}
-			if (side == PanelContainerSide.BOTTOM || side == PanelContainerSide.RIGHT)	//swap container x, y, width and height
+			
+			if (side == ContainerSide.BOTTOM || side == ContainerSide.RIGHT)	//swap container x, y, width and height
 			{
 				swap = sideX;
 				sideX = otherSideX;
@@ -692,7 +637,7 @@ package airdock.impl
 		 */
 		public function removePanel(panel:IPanel):IContainer
 		{
-			var result:IContainer = findPanel(panel)
+			const result:IContainer = findPanel(panel)
 			if (result) {
 				result.removeChild(panel as DisplayObject)
 			}
@@ -710,18 +655,8 @@ package airdock.impl
 			else if (getPanels(false).indexOf(panel) != -1) {
 				return this;
 			}
-			else if(hasSides)
-			{
-				var result:IContainer;
-				if (currentSide) {
-					result = currentSide.findPanel(panel)
-				}
-				if(result) {
-					return result;
-				}
-				else if(otherSide) {
-					return otherSide.findPanel(panel)
-				}
+			else if(hasSides) {
+				return (currentSide && currentSide.findPanel(panel)) || (otherSide && otherSide.findPanel(panel))
 			}
 			return null;
 		}
@@ -729,47 +664,36 @@ package airdock.impl
 		/**
 		 * @inheritDoc
 		 */
-		public function removeContainer(panelContainer:IContainer):IContainer
+		public function removeContainer(container:IContainer):IContainer
 		{
 			var oppContainer:IContainer;
-			if(panelContainer == this) {
+			if(container == this) {
 				return null;	//cannot return this, because remove operation did not succeed
 			}
-			else if (panelContainer == currentSide) {
+			else if (container == currentSide) {
 				oppContainer = otherSide
 			}
-			else if (panelContainer == otherSide) {
+			else if (container == otherSide) {
 				oppContainer = currentSide
 			}
-			else
-			{
-				var result:IContainer;
-				if (currentSide) {
-					result = currentSide.removeContainer(panelContainer)
-				}
-				if(result) {
-					return result
-				}
-				if (otherSide) {
-					result = otherSide.removeContainer(panelContainer)
-				}
-				return result
+			else {
+				return (currentSide && currentSide.removeContainer(container)) || (otherSide && otherSide.removeContainer(container))
 			}
 			oppContainer.mergeIntoContainer(this)
-			return panelContainer
+			return container
 		}
 		
 		/**
 		 * @inheritDoc
 		 */
-		public function addContainer(side:int, container:IContainer):IContainer
+		public function addContainer(side:String, container:IContainer):IContainer
 		{
-			if (!container) {
+			if (!(side && container)) {
 				return null;
 			}
 			
 			var retCon:IContainer							//heh
-			var sideContainer:IContainer = getSide(side)	//get: FILL (this) or side (child container)
+			const sideContainer:IContainer = getSide(side)	//get: FILL (this) or side (child container)
 			if (sideContainer && ((sideContainer == this && !getPanelCount(true)) || (sideContainer.hasSides == container.hasSides && sideContainer.sideCode == container.sideCode)))
 			{
 				/* Merge into this container if:
@@ -787,7 +711,7 @@ package airdock.impl
 					 * Add selfContainer as a subcontainer of this container
 					 * Add the supplied container as a subcontainer of this container
 				 */
-				var selfContainer:IContainer = createContainer()
+				const selfContainer:IContainer = createContainer()
 				resizeContainers(side, width, height, sideSize, selfContainer, container);
 				mergeIntoContainer(selfContainer)
 				currentSide = selfContainer;
@@ -851,14 +775,14 @@ package airdock.impl
 		/**
 		 * @inheritDoc
 		 */
-		public function get sideCode():int {
+		public function get sideCode():String {
 			return cl_containerDelegate.sideCode
 		}
 		
 		/**
 		 * @inheritDoc
 		 */
-		public function set sideCode(sideCode:int):void {
+		public function set sideCode(sideCode:String):void {
 			cl_containerDelegate.sideCode = sideCode
 		}
 		
@@ -936,10 +860,10 @@ package airdock.impl
 		/**
 		 * @inheritDoc
 		 */
-		public function fetchSide(side:int):IContainer
+		public function fetchSide(side:String):IContainer
 		{
 			if(!getSide(side)) {
-				addContainer(PanelContainerSide.getComplementary(side), createContainer())
+				addContainer(ContainerSide.getComplementary(side), createContainer())
 			}
 			return getSide(side)
 		}
@@ -974,24 +898,19 @@ package airdock.impl
 		
 		private function redraw(width:Number, height:Number):void 
 		{
-			var dispPanelList:DisplayObject = displayablePanelList;
-			var effHeight:Number = height, effWidth:Number = width;
-			var oldWidth:Number = this.width, oldHeight:Number = this.height
-			var valueChange:Boolean = !(oldWidth == effWidth && oldHeight == effHeight)
-			if (valueChange)
+			const dispPanelList:DisplayObject = displayablePanelList;
+			const oldWidth:Number = this.width, oldHeight:Number = this.height
+			const displayable:IDisplayablePanelList = dispPanelList as IDisplayablePanelList;
+			
+			graphics.clear()
+			graphics.beginFill(0, 0)				//draws transparent graphics
+			graphics.drawRect(0, 0, width, height)	//so that it receives mouse/interaction events
+			graphics.endFill()						//even if it is empty
+			
+			if (displayable)
 			{
-				var displayable:IDisplayablePanelList = dispPanelList as IDisplayablePanelList;
-				var preferredLocation:Point;
-				if (displayable)
-				{
-					displayable.maxWidth = width;
-					displayable.maxHeight = height;
-					preferredLocation = displayable.preferredLocation
-					dispPanelList.x = preferredLocation.x
-					dispPanelList.y = preferredLocation.y
-					addChild(dispPanelList)
-				}
-				cl_containerDelegate.applyFilters(displayFilters)
+				displayable.draw(width, height)
+				addChild(dispPanelList)
 			}
 			
 			if (hasSides) {
@@ -999,28 +918,28 @@ package airdock.impl
 			}
 			else
 			{
-				var effX:Number, effY:Number;
-				if (dispPanelList)
+				var effX:Number = 0.0, effY:Number = 0.0, effWidth:Number = 0.0, effHeight:Number = 0.0, hidePanels:Boolean = false
+				if (displayable)
 				{
-					var rect:Rectangle = (dispPanelList as IDisplayablePanelList).visibleRegion
+					const rect:Rectangle = displayable.visibleRegion
+					hidePanels = rect.isEmpty()
 					effHeight = rect.height;
 					effWidth = rect.width;
 					effX = rect.x;
 					effY = rect.y;
 				}
-				var panelArray:Vector.<IPanel> = getPanels(false);
-				for (var i:int = panelArray.length - 1; i >= 0; --i)
+				getPanels(false).forEach(function resizePanels(item:IPanel, index:int, array:Vector.<IPanel>):void
 				{
-					var currPanel:IPanel = panelArray[i];
-					currPanel.height = effHeight;
-					currPanel.width = effWidth;
-					currPanel.x = effX;
-					currPanel.y = effY;
-				}
+					item.height != effHeight && (item.height = effHeight);
+					item.width != effWidth && (item.width = effWidth);
+					item.x != effX && (item.x = effX);
+					item.y != effY && (item.y = effY);
+					if (item.visible == hidePanels) {
+						item.visible = !hidePanels	//hide items if rect.size == 0, or show them if rect.size > 0
+					}
+				}, this);
 			}
-			if(valueChange) {
-				dispatchEvent(new PanelContainerEvent(PanelContainerEvent.RESIZED, null, this, true, false))
-			}
+			cl_containerDelegate.applyFilters(displayFilters)
 		}
 	}
 }

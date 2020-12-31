@@ -18,10 +18,14 @@ package airdock.impl.strategies
 	import flash.display.NativeWindowInitOptions;
 	import flash.display.NativeWindowSystemChrome;
 	import flash.display.NativeWindowType;
+	import flash.display.StageAlign;
+	import flash.display.StageScaleMode;
 	import flash.events.Event;
 	import flash.events.IEventDispatcher;
 	import flash.events.NativeDragEvent;
+	import flash.events.NativeWindowBoundsEvent;
 	import flash.geom.Point;
+	import flash.geom.Rectangle;
 	import flash.utils.Dictionary;
 	
 	/**
@@ -54,7 +58,7 @@ package airdock.impl.strategies
 			if(!(baseDocker && baseDocker is ICustomizableDocker)) {
 				throw new ArgumentError("Error: Argument baseDocker must be a non-null ICustomizableDocker instance.");
 			}
-			var customizableDocker:ICustomizableDocker = ICustomizableDocker(baseDocker);
+			const customizableDocker:ICustomizableDocker = ICustomizableDocker(baseDocker);
 			cl_hostDocker = customizableDocker;
 			addDockerListeners(baseDocker);
 			createWindow(baseDocker)
@@ -62,8 +66,8 @@ package airdock.impl.strategies
 		
 		private function createWindow(baseDocker:IBasicDocker):void 
 		{
-			var mainContainer:DisplayObject = baseDocker.mainContainer
-			var lightWeightOptions:NativeWindowInitOptions = new NativeWindowInitOptions()
+			const mainContainer:DisplayObject = baseDocker.mainContainer
+			const lightWeightOptions:NativeWindowInitOptions = new NativeWindowInitOptions()
 			lightWeightOptions.maximizable = lightWeightOptions.minimizable = lightWeightOptions.resizable = false;
 			lightWeightOptions.systemChrome = NativeWindowSystemChrome.NONE
 			lightWeightOptions.type = NativeWindowType.LIGHTWEIGHT;
@@ -71,7 +75,10 @@ package airdock.impl.strategies
 			if(mainContainer && mainContainer.stage) {
 				lightWeightOptions.owner = mainContainer.stage.nativeWindow
 			}
+			
 			nwnd_dockerWindow = new NativeWindow(lightWeightOptions)
+			nwnd_dockerWindow.stage.align = StageAlign.TOP_LEFT
+			nwnd_dockerWindow.stage.scaleMode = StageScaleMode.NO_SCALE
 			nwnd_dockerWindow.stage.addEventListener(NativeDragEvent.NATIVE_DRAG_ENTER, changeDockHelperState, false, 0, true)
 		}
 		
@@ -97,10 +104,10 @@ package airdock.impl.strategies
 		{
 			if (evt.fieldName == "mainContainer")
 			{
-				var prevContainer:DisplayObject = evt.oldValue as DisplayObject
-				var newContainer:DisplayObject = evt.newValue as DisplayObject
+				const prevContainer:DisplayObject = evt.oldValue as DisplayObject
+				const newContainer:DisplayObject = evt.newValue as DisplayObject
 				if (newContainer) {
-					newContainer.addEventListener(NativeDragEvent.NATIVE_DRAG_COMPLETE, changeDockHelperState)
+					newContainer.addEventListener(NativeDragEvent.NATIVE_DRAG_COMPLETE, changeDockHelperState, false, 0, true)
 				}
 				if (prevContainer) {
 					prevContainer.removeEventListener(NativeDragEvent.NATIVE_DRAG_COMPLETE, changeDockHelperState)
@@ -108,18 +115,14 @@ package airdock.impl.strategies
 			}
 			else if(evt.fieldName == "dockHelper")
 			{
-				var prevHelper:DisplayObject = evt.oldValue as DisplayObject
-				var dockHelper:IDockHelper = evt.newValue as IDockHelper
+				const prevHelper:DisplayObject = evt.oldValue as DisplayObject
+				const dockHelper:IDockHelper = evt.newValue as IDockHelper
 				nwnd_dockerWindow.stage.removeChildren()
 				removeDockHelperListeners(prevHelper)
 				addDockHelperListeners(dockHelper)
 				if (dockHelper)
 				{
-					dockHelper.setDockFormat(dockFormat.panelFormat, dockFormat.containerFormat)
-					dockHelper.draw(dockHelper.getDefaultWidth(), dockHelper.getDefaultHeight());
-					
-					nwnd_dockerWindow.stage.stageWidth = dockHelper.width
-					nwnd_dockerWindow.stage.stageHeight = dockHelper.height
+					dockHelper.setDockFormats(dockFormat.panelFormat, dockFormat.containerFormat)
 					nwnd_dockerWindow.stage.addChild(dockHelper as DisplayObject)
 				}
 			}
@@ -180,36 +183,48 @@ package airdock.impl.strategies
 		
 		private function changeDockHelperState(evt:NativeDragEvent):void 
 		{
-			var type:String = evt.type
-			if (!(dockHelper && isCompatibleClipboard(evt.clipboard))) {
+			const type:String = evt.type
+			const clipBoard:Clipboard = evt.clipboard;
+			if (!(dockHelper && isCompatibleClipboard(clipBoard))) {
 				return;
 			}
 			else if (type == NativeDragEvent.NATIVE_DRAG_ENTER)
 			{
-				var clipBoard:Clipboard = evt.clipboard;
-				var targetContainer:IContainer = (evt.target as IContainer) || treeResolver.findParentContainer(evt.target as DisplayObject)
-				var clipboardContainer:IContainer = clipBoard.getData(dockFormat.containerFormat, ClipboardTransferMode.ORIGINAL_ONLY) as IContainer;
-				var dropContainerInfo:IDragDockFormat = clipBoard.getData(dockFormat.destinationFormat, ClipboardTransferMode.ORIGINAL_ONLY) as IDragDockFormat
+				const targetContainer:IContainer = (evt.target as IContainer) || treeResolver.findParentContainer(evt.target as DisplayObject)
+				const clipboardContainer:IContainer = clipBoard.getData(dockFormat.containerFormat, ClipboardTransferMode.ORIGINAL_ONLY) as IContainer;
+				const dropContainerInfo:IDragDockFormat = clipBoard.getData(dockFormat.destinationFormat, ClipboardTransferMode.ORIGINAL_ONLY) as IDragDockFormat
 				if (evt.currentTarget == dockHelper) {
 					dropContainerInfo.sideSequence = dockHelper.getSideFrom(evt.target as DisplayObject)
 				}
 				else if (targetContainer && !targetContainer.hasSides)
 				{
-					var targetWindow:NativeWindow = targetContainer.stage.nativeWindow
-					var centerPoint:Point = new Point(0.5 * (targetContainer.width - dockHelper.width), 0.5 * (targetContainer.height - dockHelper.height))
-					var stageCoordinates:Point = targetWindow.globalToScreen(targetContainer.localToGlobal(centerPoint))
-					
-					nwnd_dockerWindow.x = stageCoordinates.x
-					nwnd_dockerWindow.y = stageCoordinates.y
+					const targetWindow:NativeWindow = targetContainer.stage.nativeWindow
+					var stageCoordinates:Point = targetWindow.globalToScreen(targetContainer.localToGlobal(new Point()))
+					var newBounds:Rectangle = new Rectangle(int(stageCoordinates.x), int(stageCoordinates.y), int(targetContainer.width), int(targetContainer.height))
+					if (newBounds.equals(nwnd_dockerWindow.bounds)) {
+						showDockHelperOnMove(null)
+					}
+					else
+					{
+						nwnd_dockerWindow.addEventListener(NativeWindowBoundsEvent.MOVE, showDockHelperOnMove, false, 0, true);
+						dockHelper.draw(newBounds.width, newBounds.height)
+						nwnd_dockerWindow.bounds = newBounds
+					}
 					dockHelper.show()
-					nwnd_dockerWindow.visible = true;
-					nwnd_dockerWindow.orderInFrontOf(targetWindow)
 					dropContainerInfo.destinationContainer = targetContainer
 				}
 			}
 			else if(evt.type == NativeDragEvent.NATIVE_DRAG_DROP || evt.type == NativeDragEvent.NATIVE_DRAG_COMPLETE || !evt.relatedObject || nwnd_dockerWindow.stage.contains(evt.relatedObject)) {
 				nwnd_dockerWindow.visible = false;
 			}
+		}
+		
+		private function showDockHelperOnMove(evt:Event):void
+		{
+			nwnd_dockerWindow.visible = true;
+			nwnd_dockerWindow.orderToFront();
+			nwnd_dockerWindow.bounds
+			nwnd_dockerWindow.removeEventListener(NativeWindowBoundsEvent.MOVE, showDockHelperOnMove)
 		}
 		
 		private function get dockHelper():IDockHelper {
@@ -245,7 +260,7 @@ package airdock.impl.strategies
 		}
 		
 		[Inline]
-		private function isCompatibleClipboard(clipboard:Clipboard):Boolean {
+		private final function isCompatibleClipboard(clipboard:Clipboard):Boolean {
 			return clipboard.hasFormat(dockFormat.panelFormat) || clipboard.hasFormat(dockFormat.containerFormat)
 		}
 	}

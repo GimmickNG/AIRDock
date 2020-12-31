@@ -35,10 +35,12 @@ package airdock.impl
 		 */
 		public function createPanel(options:PanelConfig):IPanel 
 		{
-			var defaultPanel:DefaultPanel = new DefaultPanel()
-			defaultPanel.draw(options.color, options.width, options.height)
+			const defaultPanel:DefaultPanel = new DefaultPanel()
+			defaultPanel.backgroundColor = options.color;
 			defaultPanel.resizable = options.resizable;
 			defaultPanel.dockable = options.dockable;
+			defaultPanel.height = options.height;
+			defaultPanel.width = options.width;
 			return defaultPanel
 		}
 		
@@ -47,7 +49,7 @@ package airdock.impl
 		 */
 		public function createContainer(options:ContainerConfig):IContainer 
 		{
-			var defaultContainer:IContainer = new DefaultContainer()
+			const defaultContainer:IContainer = new DefaultContainer()
 			defaultContainer.height = options.height
 			defaultContainer.width = options.width
 			return defaultContainer

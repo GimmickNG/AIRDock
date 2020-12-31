@@ -1,11 +1,10 @@
 package airdock.impl.filters 
 {
+	import airdock.interfaces.display.IDisplayFilter;
+	import airdock.interfaces.display.IFilterable;
 	import flash.display.LineScaleMode;
 	import flash.display.Shape;
-	import flash.display.Sprite;
 	import flash.utils.Dictionary;
-	import airdock.interfaces.display.IFilterable;
-	import airdock.interfaces.display.IDisplayFilter;
 	
 	/**
 	 * Border filter which draws a border around the filterable instance.
@@ -47,7 +46,7 @@ package airdock.impl.filters
 			if(!(filterable in dct_targets)) {
 				dct_targets[filterable] = new Shape()
 			}
-			var shape:Shape = dct_targets[filterable];
+			const shape:Shape = dct_targets[filterable];
 			shape.graphics.clear()
 			shape.graphics.beginFill(color, num_colorAlpha)
 			shape.graphics.lineStyle(num_thickness, u_color, num_colorAlpha, false, LineScaleMode.NONE)
@@ -79,7 +78,7 @@ package airdock.impl.filters
 			if(!(filterable in dct_targets)) {
 				return
 			}
-			var shape:Shape = dct_targets[filterable];
+			const shape:Shape = dct_targets[filterable];
 			if (shape.parent == filterable) {
 				filterable.removeChild(shape);
 			}

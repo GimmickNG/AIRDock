@@ -40,16 +40,6 @@ package airdock.events
 	[Event(name="pcSetupRequested", type="airdock.events.PanelContainerEvent.SETUP_REQUESTED")]
 	
 	/**
-	 * @eventType	airdock.events.PanelContainerEvent.RESIZED
-	 */
-	[Event(name="pcContainerResized", type="airdock.events.PanelContainerEvent.RESIZED")]
-	
-	/**
-	 * @eventType	airdock.events.PanelContainerEvent.RESIZING
-	 */
-	[Event(name="pcContainerResizing", type = "airdock.events.PanelContainerEvent.RESIZING")]
-	
-	/**
 	 * @eventType	airdock.events.PanelContainerEvent.CONTAINER_CREATED
 	 */
 	[Event(name="pcContainerCreated", type="airdock.events.PanelContainerEvent.CONTAINER_CREATED")]
@@ -64,6 +54,11 @@ package airdock.events
 		 * The constant used to define a panelAdded event. Is dispatched by a container whenever a panel is added directly to it, i.e. not to subcontainers.
 		 */
 		public static const PANEL_ADDED:String = "pcPanelAdded";
+		
+		/**
+		 * The constant used to define a panelRemoved event. Is dispatched by a container whenever a panel is removed from a container.
+		 */
+		public static const PANEL_REMOVED:String = "pcPanelRemoved";
 		
 		/**
 		 * The constant used to define a dragRequested event. 
@@ -113,18 +108,6 @@ package airdock.events
 		 * Since this is a request, it can be canceled to prevent default action.
 		 */
 		public static const SETUP_REQUESTED:String = "pcSetupRequested";
-		
-		/**
-		 * The constant used to define a resized event.
-		 * Is dispatched whenever a panel or container has been resized.
-		 */
-		public static const RESIZED:String = "pcContainerResized";
-		
-		/**
-		 * The constant used to define a resizing event.
-		 * Is dispatched whenever a panel or container is going to be resized.
-		 */
-		public static const RESIZING:String = "pcContainerResizing";
 		
 		/**
 		 * The constant used to define a containerCreated event.

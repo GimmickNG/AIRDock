@@ -1,7 +1,5 @@
 package airdock.interfaces.docking 
 {
-	import flash.display.DisplayObject;
-	
 	/**
 	 * ...
 	 * @author Gimmick

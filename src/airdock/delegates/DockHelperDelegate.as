@@ -1,6 +1,6 @@
 package airdock.delegates 
 {
-	import airdock.enums.PanelContainerSide;
+	import airdock.enums.ContainerSide;
 	import airdock.interfaces.ui.IDockHelper;
 	import flash.desktop.NativeDragManager;
 	import flash.display.DisplayObject;
@@ -44,18 +44,14 @@ package airdock.delegates
 			delete dct_dockTargets[target];
 		}
 		
-		public function getSideFrom(dropTarget:DisplayObject):String
-		{
-			if(dropTarget in dct_dockTargets) {
-				return String(dct_dockTargets[dropTarget])
-			}
-			return PanelContainerSide.STRING_FILL
+		public function getSideFrom(dropTarget:DisplayObject):String {
+			return dct_dockTargets[dropTarget] || ContainerSide.FILL
 		}
 		
 		public function get targets():Vector.<DisplayObject>
 		{
-			var targets:Vector.<DisplayObject> = new Vector.<DisplayObject>()
-			for(var obj:Object in dct_dockTargets) {
+			const targets:Vector.<DisplayObject> = new Vector.<DisplayObject>()
+			for (var obj:Object in dct_dockTargets) {
 				targets.push(obj)
 			}
 			return targets;
@@ -63,7 +59,7 @@ package airdock.delegates
 		
 		private function displayTargetsOnDrag(evt:NativeDragEvent):void 
 		{
-			var currentTarget:InteractiveObject = evt.target as InteractiveObject
+			const currentTarget:InteractiveObject = evt.target as InteractiveObject
 			if ((currentTarget in dct_dockTargets && (evt.clipboard.hasFormat(str_panelFormat) || evt.clipboard.hasFormat(str_containerFormat))))
 			{
 				cl_dockHelper.hide()	//show only the current target

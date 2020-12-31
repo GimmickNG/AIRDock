@@ -31,7 +31,7 @@ package airdock.interfaces.ui
 		/**
 		 * The minimum percentage of the container's size within which the user's cursor must be within, in order to activate the resizer and start a possible resize operation.
 		 * The size depends on the current side of the container, and by extension, the resizer as well; a side of LEFT or RIGHT takes the width as the size, and TOP or BOTTOM takes the height as the size.
-		 * @see	airdock.enums.PanelContainerSide
+		 * @see	airdock.enums.ContainerSide
 		 */
 		function get tolerance():Number;
 		
@@ -44,8 +44,8 @@ package airdock.interfaces.ui
 		 * The side of the container that the resizer is to be, and will be, resized to.
 		 * This is automatically set by the Docker whenever the resize is to take place.
 		 */
-		function get sideCode():int;
-		function set sideCode(sideCode:int):void
+		function get sideCode():String;
+		function set sideCode(sideCode:String):void
 		
 		/**
 		 * The container which is to be resized. This is automatically set by the Docker whenever the resize is to take place.

@@ -1,18 +1,10 @@
 package airdock.impl 
 {
 	import airdock.delegates.PanelDelegate;
-	import airdock.enums.PanelContainerState;
 	import airdock.events.PropertyChangeEvent;
 	import airdock.interfaces.display.IDisplayFilter;
 	import airdock.interfaces.docking.IPanel;
-	import flash.display.DisplayObject;
-	import flash.display.DisplayObjectContainer;
-	import flash.display.InteractiveObject;
 	import flash.display.Sprite;
-	import flash.events.Event;
-	import flash.events.EventPhase;
-	import flash.events.MouseEvent;
-	import flash.geom.Point;
 	
 	/**
 	 * Dispatched after a PROPERTY_CHANGING event has been dispatched, and if it has not been prevented, causing the related property to change.
@@ -47,36 +39,51 @@ package airdock.impl
 		{
 			super();
 			cl_panelDelegate = new PanelDelegate(this)
+			addEventListener(PropertyChangeEvent.PROPERTY_CHANGING, updateSizeOnRedraw, false, 0, true)
+			addEventListener(PropertyChangeEvent.PROPERTY_CHANGED, applyFiltersOnUpdate, false, 0, true)
 		}
-		CONFIG::debug override public function toString():String 
+		
+		override public function toString():String 
 		{
-			return panelName;
+			return panelName
 		}
-		public function draw(color:uint, width:int, height:int):void
+		
+		private function applyFiltersOnUpdate(evt:PropertyChangeEvent):void 
 		{
-			var prevWidth:Number = this.width
-			var prevHeight:Number = this.height
-			if((prevWidth != width && !cl_panelDelegate.dispatchChanging("width", prevWidth, width) || (prevHeight != height && !cl_panelDelegate.dispatchChanging("height", prevHeight, height)))) {
+			if(evt.target == this && (evt.fieldName == "width" || evt.fieldName == "height")) {
+				cl_panelDelegate.applyFilters(displayFilters)
+			}
+		}
+		
+		private function updateSizeOnRedraw(evt:PropertyChangeEvent):void 
+		{
+			const value:Number = Number(evt.newValue)
+			if(evt.isDefaultPrevented() || evt.target != this) {
 				return;
 			}
-			
-			if (u_color != color && cl_panelDelegate.dispatchChanging("backgroundColor", prevColor, color))
+			else switch(evt.fieldName)
 			{
-				var prevColor:uint = u_color;
-				u_color = color;
-				cl_panelDelegate.dispatchChanged("backgroundColor", prevColor, color)
+				case "backgroundColor":
+					redraw(value, width, height);
+					break;
+				case "width":
+					redraw(backgroundColor, value, height);
+					break;
+				case "height":
+					redraw(backgroundColor, width, value);
+					break;
 			}
-			var colorAlpha:Number = ((color >>> 24) & 0xFF) / 0xFF
+		}
+		
+		private function redraw(color:uint, width:Number, height:Number):void 
+		{
+			if(isNaN(width) || isNaN(height)) {
+				return;
+			}
 			graphics.clear()
-			graphics.beginFill(color & 0x00FFFFFF, colorAlpha)
+			graphics.beginFill(color & 0x00FFFFFF, ((color >>> 24) & 0xFF) / 0xFF)
 			graphics.drawRect(0, 0, width, height)
 			graphics.endFill()
-			if (prevWidth != width) {
-				cl_panelDelegate.dispatchChanged("width", prevWidth, width)
-			}
-			if (prevHeight != height) {
-				cl_panelDelegate.dispatchChanged("height", prevHeight, height)
-			}
 		}
 		
 		/**
@@ -102,14 +109,11 @@ package airdock.impl
 		}
 		
 		public function get backgroundColor():uint {
-			return u_color;
+			return cl_panelDelegate.backgroundColor;
 		}
 		
-		public function set backgroundColor(value:uint):void 
-		{
-			if (value != u_color) {
-				draw(value, width, height)
-			}
+		public function set backgroundColor(value:uint):void {
+			cl_panelDelegate.backgroundColor = value
 		}
 		
 		/**
@@ -158,34 +162,28 @@ package airdock.impl
 		 * @inheritDoc
 		 */
 		override public function get width():Number {
-			return super.width;
+			return cl_panelDelegate.width
 		}
 		
 		/**
 		 * @inheritDoc
 		 */
-		override public function set width(value:Number):void 
-		{
-			if (width != value) {
-				draw(u_color, value, height)
-			}
+		override public function set width(value:Number):void {
+			cl_panelDelegate.width = value;
 		}
 		
 		/**
 		 * @inheritDoc
 		 */
 		override public function get height():Number {
-			return super.height;
+			return cl_panelDelegate.height
 		}
 		
 		/**
 		 * @inheritDoc
 		 */
-		override public function set height(value:Number):void 
-		{
-			if (height != value) {
-				draw(u_color, width, value);
-			}
+		override public function set height(value:Number):void {
+			cl_panelDelegate.height = value
 		}
 	}
 

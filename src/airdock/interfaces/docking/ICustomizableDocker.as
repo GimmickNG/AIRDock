@@ -1,6 +1,7 @@
 package airdock.interfaces.docking 
 {
 	import airdock.interfaces.factories.IPanelListFactory;
+	import airdock.interfaces.strategies.IThumbnailStrategy;
 	import airdock.interfaces.ui.IDockHelper;
 	import airdock.interfaces.ui.IResizer;
 	
@@ -18,6 +19,8 @@ package airdock.interfaces.docking
 		 * @param	panelListFactory	An IPanelListFactory instance which is used to create IPanelList instances for the IContainers which are part of this Docker.
 		 */
 		function setPanelListFactory(panelListFactory:IPanelListFactory):void;
+		
+		function get thumbnailStrategy():IThumbnailStrategy;
 		
 		/**
 		 * An IDockHelper instance which determines the user interface for docking. Setting this to null prevents the user from docking panels.
